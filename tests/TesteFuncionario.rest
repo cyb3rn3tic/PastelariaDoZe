@@ -1,0 +1,35 @@
+### Verbo GET – listar todos
+GET http://localhost:8000/funcionario/ HTTP/1.1
+
+### Verbo GET – listar um
+GET http://localhost:8000/uncionario/10 HTTP/1.1
+
+### Verbo POST – adicionar
+POST http://localhost:8000/funcionario/ HTTP/1.1
+content-type: application/json
+
+{
+    "nome": "Maria",
+    "matricula": "2165465432",
+    "cpf": "12345678900",
+    "telefone": "45421265254",
+    "grupo": 4,
+    "senha": "123456"
+}
+
+### Verbo PUT – atualiza
+PUT http://localhost:8000/funcionario/1 HTTP/1.1
+content-type: application/json
+
+{
+    "nome": "Maria",
+    "matricula": "2165465432",
+    "cpf": "12345678900",
+    "telefone": "45421265254"
+}
+
+### Verbo DELETE - excluir
+DELETE http://localhost:8000/funcionario/3 HTTP/1.1
+
+
+#Osmar Steffen
