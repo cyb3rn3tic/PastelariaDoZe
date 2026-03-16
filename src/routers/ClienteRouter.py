@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from domain.entities.Cliente import Cliente
 
 router = APIRouter()
 
@@ -18,7 +19,7 @@ def post_cliente(corpo: Cliente):
 
 @router.put("/cliente/{id}", tags=["Cliente"], status_code=200)
 def put_cliente(id: int, corpo: Cliente):
-    return {"msg": "cliente put executado", "id":id, "nome": corpo.nome, "cpf": corpo.cpf, "telefone": corpo.telefone}
+    return {"msg": "cliente put executado", "id":id, "nome":corpo.nome, "cpf":corpo.cpf, "telefone":corpo.telefone}
 
 @router.delete("/cliente/{id}", tags=["Cliente"], status_code=200)
 def delete_cliente(id: int):
