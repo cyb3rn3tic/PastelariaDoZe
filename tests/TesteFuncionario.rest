@@ -2,7 +2,7 @@
 GET http://localhost:8000/funcionario/ HTTP/1.1
 
 ### Verbo GET – listar um
-GET http://localhost:8000/uncionario/10 HTTP/1.1
+GET http://localhost:8000/funcionario/10 HTTP/1.1
 
 ### Verbo POST – adicionar
 POST http://localhost:8000/funcionario/ HTTP/1.1
@@ -22,10 +22,12 @@ PUT http://localhost:8000/funcionario/1 HTTP/1.1
 content-type: application/json
 
 {
-    "nome": "Maria",
+    "nome": "Maria Alterada",
     "matricula": "2165465432",
     "cpf": "12345678900",
-    "telefone": "45421265254"
+    "telefone": "49999999999",
+    "grupo": 1,
+    "senha": "nova_senha_123"
 }
 
 ### Verbo DELETE - excluir

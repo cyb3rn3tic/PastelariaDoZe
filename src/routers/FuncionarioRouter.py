@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from domain.schemas.FuncionarioSchema import Funcionario
 from sqlalchemy.orm import Session
 from typing import List
 
