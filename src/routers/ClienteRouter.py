@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from domain.entities.Cliente import Cliente
+from domain.schemas.ClienteSchema import Cliente
 
 router = APIRouter()
 
