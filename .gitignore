@@ -9,3 +9,4 @@ pyvenv.cfg
 .vscode
 comandas_db.db
 .venv/
+.env/
