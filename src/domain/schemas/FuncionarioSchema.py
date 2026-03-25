@@ -2,7 +2,7 @@ from pydantic import BaseModel, ConfigDict
 from typing import Optional
 
 class FuncionarioCreate(BaseModel):
-    id_funcionario: int = None # onde tem "None" é opcional
+    id_funcionario: int = None
     nome: str
     matricula: str
     cpf: str

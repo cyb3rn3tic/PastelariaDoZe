@@ -16,7 +16,6 @@ from infra.database import get_db
 router = APIRouter()
 
 # Criar as rotas/endpoints: GET, POST, PUT, DELETE
-
 @router.get("/cliente/", response_model=List[ClienteResponse], tags=["Cliente"], status_code=status.HTTP_200_OK)
 async def get_cliente(db: Session = Depends(get_db)):
     """Retorna todos os clientes"""
