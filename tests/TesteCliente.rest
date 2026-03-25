@@ -10,8 +10,8 @@ content-type: application/json
 
 {
     "nome": "João",
-    "cpf": "12345678900",
-    "telefone": "45421265254"
+    "cpf": "2345678900",
+    "telefone": "45421265255"
 }
 
 ### Verbo PUT – atualiza
@@ -19,9 +19,9 @@ PUT http://localhost:8000/cliente/2 HTTP/1.1
 content-type: application/json
 
 {
-    "nome": "João",
-    "cpf": "12345678900",
-    "telefone": "45421265254"
+    "nome": "João Alterado",
+    "cpf": "23456789005",
+    "telefone": "4542126525"
 }
 
 ### Verbo DELETE - excluir
