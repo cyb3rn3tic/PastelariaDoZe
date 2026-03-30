@@ -28,18 +28,18 @@ Content-Type: application/json
 }
 
 ### Verbo PUT – atualiza
-PUT http://localhost:8000/produto/1 HTTP/1.1
+PUT http://localhost:8000/produto/2 HTTP/1.1
 content-type: application/json
 
 {
     "nome": "Pastel",
-    "descricao": "de Frango",
+    "descricao": "de Carne",
     "foto": "pastel.jpg",
-    "valor_unitario": 5.0
+    "valor_unitario": 5.50
 }
 
 ### Verbo DELETE - excluir
-DELETE http://localhost:8000/produto/1 HTTP/1.1
+DELETE http://localhost:8000/produto/2 HTTP/1.1
 
 #Osmar Steffen
 

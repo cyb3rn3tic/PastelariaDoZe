@@ -70,7 +70,6 @@ async def post_funcionario(funcionario_data: FuncionarioCreate, db: Session = De
             cpf=funcionario_data.cpf,
             telefone=funcionario_data.telefone,
             grupo=funcionario_data.grupo,
-            senha=funcionario_data.senha,
             senha=hashed_password
         )
 
