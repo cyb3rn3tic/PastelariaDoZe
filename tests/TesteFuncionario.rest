@@ -9,29 +9,31 @@ POST http://localhost:8000/funcionario/ HTTP/1.1
 content-type: application/json
 
 {
-    "nome": "Osmar",
-    "matricula": "2165465432",
-    "cpf": "1234567900",
-    "telefone": "45421265254",
-    "grupo": 4,
-    "senha": "123456"
+    "nome": "João Silva",
+    "matricula": "5564123874",
+    "cpf": "98765432101",
+    "telefone": "2195555344",
+    "grupo": 2,
+    "senha": "joao_asd_2026",
+    "email": "joao.silva@provedor.net"
 }
 
 ### Verbo PUT – atualiza
-PUT http://localhost:8000/funcionario/1 HTTP/1.1
+PUT http://localhost:8000/funcionario/3 HTTP/1.1
 content-type: application/json
 
 {
-    "nome": "Osmar Steffen",
-    "matricula": "2165465432",
-    "cpf": "1234567902",
-    "telefone": "49999999999",
-    "grupo": 1,
-    "senha": "nova_senha_123"
+    "nome": "Maria Souza",
+    "matricula": "5564123874",
+    "cpf": "55544485322",
+    "telefone": "2195555344",
+    "grupo": 2,
+    "senha": "maria_s_2026",
+    "email": "souza.maria@provedor.net"
 }
 
 ### Verbo DELETE - excluir
-DELETE http://localhost:8000/funcionario/1 HTTP/1.1
+DELETE http://localhost:8000/funcionario/4 HTTP/1.1
 
 
 #Osmar Steffen
