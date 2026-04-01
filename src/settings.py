@@ -31,3 +31,9 @@ elif DB_SGDB == 'mssql': # SQL Server
     STR_DATABASE = f"mssql+pymssql://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}?charset=utf8"
 else: # SQLite
     STR_DATABASE = f"sqlite:///apiDatabase.db"
+
+# Configurações JWT
+SECRET_KEY = os.getenv("SECRET_KEY", "uihn87qgr7yw89xnhwq78rj182892uj9u1jxerhm0x1nghj12mm0znvy8oniwerhi9ewrnjhtcu89q34jhry8c34hp")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))

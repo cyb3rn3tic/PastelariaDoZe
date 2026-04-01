@@ -14,6 +14,13 @@ class ProdutoUpdate(BaseModel):
     foto: Optional[bytes] = None
     valor_unitario: Optional[Decimal] = None
 
+class ProdutoPublicResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
+    nome: str
+    descricao: str
+    foto: bytes
+
 class ProdutoResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
