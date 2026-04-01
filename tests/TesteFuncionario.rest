@@ -9,31 +9,77 @@ POST http://localhost:8000/funcionario/ HTTP/1.1
 content-type: application/json
 
 {
-    "nome": "João Silva",
+    "nome": "Osmar Steffen",
     "matricula": "5564123874",
     "cpf": "98765432101",
     "telefone": "2195555344",
     "grupo": 2,
-    "senha": "joao_asd_2026",
-    "email": "joao.silva@provedor.net"
+    "senha": "osmar_2026",
+    "email": "osmar@provedor.net"
 }
 
 ### Verbo PUT – atualiza
-PUT http://localhost:8000/funcionario/3 HTTP/1.1
+PUT http://localhost:8000/funcionario/1 HTTP/1.1
 content-type: application/json
 
 {
-    "nome": "Maria Souza",
+    "nome": "Osmar Steffen",
     "matricula": "5564123874",
-    "cpf": "55544485322",
+    "cpf": "98765432102",
     "telefone": "2195555344",
-    "grupo": 2,
-    "senha": "maria_s_2026",
-    "email": "souza.maria@provedor.net"
+    "grupo": 1,
+    "senha": "osmar.s_2026",
+    "email": "osmar@provedor.net"
 }
 
 ### Verbo DELETE - excluir
 DELETE http://localhost:8000/funcionario/4 HTTP/1.1
 
+### Login para obter access e refresh tokens
+POST http://127.0.0.1:8000/auth/login HTTP/1.1
+content-type: application/json
+
+{
+"cpf" : "98765432102",
+"senha" : "osmar.s_2026"
+}
+
+### token gerado
+@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5ODc2NTQzMjEwMiIsImlkIjoxLCJncnVwbyI6MSwiZXhwIjoxNzc0OTM0OTA0LCJ0eXBlIjoiYWNjZXNzIn0.113xLdd6tBCbO4BCSm4be9HBLcO7k1icP2t5Kjxld-o
+@refresh_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5ODc2NTQzMjEwMiIsImlkIjoxLCJncnVwbyI6MSwiZXhwIjoxNzc1NTMyOTMxLCJ0eXBlIjoicmVmcmVzaCJ9.VPaIWzk15Ev0ITOa36jVohCK69qgN6lMsHrPrAH795A
+### testar access token para acessar endpoint protegido
+GET http://127.0.0.1:8000/auth/me HTTP/1.1
+Authorization: Bearer {{access_token}}
+
+### Usar refresh token para obter novos tokens
+POST http://localhost:8000/auth/refresh
+Content-Type: application/json
+
+{
+    "refresh_token": "{{refresh_token}}"
+}
+
+# token
+@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5ODc2NTQzMjEwMiIsImlkIjoxLCJncnVwbyI6MSwiZXhwIjoxNzc0OTM0OTA0LCJ0eXBlIjoiYWNjZXNzIn0.113xLdd6tBCbO4BCSm4be9HBLcO7k1icP2t5Kjxld-o
+
+### Verbo GET – listar todos
+GET http://localhost:8000/funcionario/ HTTP/1.1
+Authorization: Bearer {{access_token}}
+
+### Verbo GET – listar um
+GET http://localhost:8000/funcionario/2 HTTP/1.1
+Authorization: Bearer {{access_token}}
+
+### Verbo PUT – atualiza
+PUT http://127.0.0.1:8000/funcionario/2 HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{access_token}}
+{
+"nome" : "Luciano Coelho atualizado"
+}
+
+### Verbo DELETE - excluir
+DELETE http://127.0.0.1:8000/funcionario/1 HTTP/1.1
+Authorization: Bearer {{access_token}}
 
 #Osmar Steffen
