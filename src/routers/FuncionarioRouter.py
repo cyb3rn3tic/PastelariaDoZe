@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from infra.rate_limit import limiter, get_rate_limit
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -20,7 +22,8 @@ router = APIRouter()
 
 # Criar as rotas/endpoints: GET, POST, PUT, DELETE
 @router.get("/funcionario/", response_model=List[FuncionarioResponse], tags=["Funcionário"], status_code=status.HTTP_200_OK)
-async def get_funcionario(db: Session = Depends(get_db),
+@limiter.limit(get_rate_limit("moderate"))
+async def get_funcionario(request: Request, db: Session = Depends(get_db),
     current_user: FuncionarioAuth = Depends(require_group([1]))
 ): 
     """Retorna todos os funcionários"""
@@ -140,7 +143,8 @@ async def put_funcionario(id: int, funcionario_data: FuncionarioUpdate, db: Sess
         )
 
 @router.delete("/funcionario/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Funcionário"], summary="Remover funcionário")
-async def delete_funcionario(id: int, db: Session = Depends(get_db),
+@limiter.limit(get_rate_limit("critical"))
+async def delete_funcionario(request: Request, id: int, db: Session = Depends(get_db),
     current_user: FuncionarioAuth = Depends(require_group([1]))
 ):
     """Remove um funcionário"""
