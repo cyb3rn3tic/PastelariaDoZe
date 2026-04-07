@@ -11,10 +11,10 @@ content-type: application/json
 {
     "nome": "Osmar Steffen",
     "matricula": "5564123874",
-    "cpf": "98765432101",
+    "cpf": "343434",
     "telefone": "2195555344",
-    "grupo": 2,
-    "senha": "osmar_2026",
+    "grupo": 1,
+    "senha": "osmar2026",
     "email": "osmar@provedor.net"
 }
 
@@ -40,8 +40,8 @@ POST http://127.0.0.1:8000/auth/login HTTP/1.1
 content-type: application/json
 
 {
-"cpf" : "98765432102",
-"senha" : "osmar.s_2026"
+"cpf" : "505050",
+"senha" : "90900800"
 }
 
 ### token gerado
