@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import List
+from services.AuditoriaService import AuditoriaService
+from slowapi.errors import RateLimitExceeded
 
 # Domain Schemas
 from domain.schemas.ClienteSchema import (
@@ -13,8 +15,8 @@ from domain.schemas.AuthSchema import FuncionarioAuth
 # Infra
 from infra.orm.ClienteModel import ClienteDB
 from infra.database import get_db
-#from infra.security import get_password_hash
 from infra.dependencies import get_current_active_user, require_group
+from infra.rate_limit import limiter, get_rate_limit
 
 router = APIRouter()
 
@@ -90,7 +92,8 @@ async def post_cliente(cliente_data: ClienteCreate, db: Session = Depends(get_db
         )
 
 @router.put("/cliente/{id}", response_model=ClienteResponse, tags=["Cliente"], status_code=status.HTTP_200_OK)
-async def put_cliente(id: int, cliente_data: ClienteUpdate, db: Session = Depends(get_db),
+@limiter.limit(get_rate_limit("critical"))
+async def put_cliente(request: Request, id: int, cliente_data: ClienteUpdate, db: Session = Depends(get_db),
     current_user: FuncionarioAuth = Depends(require_group([1,3]))  
 ):
     """Atualiza um Cliente existente"""
@@ -111,6 +114,9 @@ async def put_cliente(id: int, cliente_data: ClienteUpdate, db: Session = Depend
             status_code=status.HTTP_400_BAD_REQUEST, detail="Já existe um cliente com este CPF"
             )
         
+        # armazena uma copia de objeto com os dados atuais, para salvar na auditoria
+        dados_antigos_obj = cliente.__dict__.copy()
+
         # Atualiza apenas os campos fornecidos
         update_data = cliente_data.model_dump(exclude_unset=True)
         
@@ -119,6 +125,18 @@ async def put_cliente(id: int, cliente_data: ClienteUpdate, db: Session = Depend
         db.commit()
         db.refresh(cliente)
         
+        # Depois de tudo executado e antes do return, registra a ação na auditoria
+        AuditoriaService.registrar_acao(
+            db=db,
+            funcionario_id=current_user.id,
+            acao="UPDATE",
+            recurso="CLIENTE",
+            recurso_id=cliente.id,
+            dados_antigos=dados_antigos_obj, 
+            dados_novos=cliente, 
+            request=request 
+        )
+
         return cliente
     
     except HTTPException:
@@ -130,7 +148,8 @@ async def put_cliente(id: int, cliente_data: ClienteUpdate, db: Session = Depend
         )
 
 @router.delete("/cliente/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Cliente"], summary="Remover cliente")
-async def delete_cliente(id: int, db: Session = Depends(get_db),
+@limiter.limit(get_rate_limit("critical"))
+async def delete_cliente(request: Request, id: int, db: Session = Depends(get_db),
     current_user: FuncionarioAuth = Depends(require_group([1]))  
 ):
     """Remove um cliente"""
@@ -145,6 +164,18 @@ async def delete_cliente(id: int, db: Session = Depends(get_db),
     
         db.delete(cliente)
         db.commit()
+
+        # Depois de tudo executado e antes do return, registra a ação na auditoria
+        AuditoriaService.registrar_acao(
+            db=db,
+            funcionario_id=current_user.id,
+            acao="DELETE",
+            recurso="CLIENTE",
+            recurso_id=cliente.id,
+            dados_antigos=cliente,
+            dados_novos=None,
+            Request=request
+        )
     
         return None
     

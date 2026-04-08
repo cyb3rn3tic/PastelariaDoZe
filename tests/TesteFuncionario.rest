@@ -25,7 +25,7 @@ content-type: application/json
 {
     "nome": "Osmar Steffen",
     "matricula": "5564123874",
-    "cpf": "98765432102",
+    "cpf": "101010",
     "telefone": "2195555344",
     "grupo": 1,
     "senha": "osmar.s_2026",

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from datetime import timedelta
+from services.AuditoriaService import AuditoriaService
 
 from domain.schemas.AuthSchema import LoginRequest, TokenResponse, RefreshTokenRequest, FuncionarioAuth
 
@@ -48,6 +49,15 @@ async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
                 "id": funcionario.id, # ID do funcionário
                 "grupo": funcionario.grupo
             }
+        )
+
+        # Registrar auditoria de login
+        AuditoriaService.registrar_acao(
+            db=db,
+            funcionario_id=funcionario.id,
+            acao="LOGIN",
+            recurso="AUTH",
+            request=Request
         )
 
         return TokenResponse(
