@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from slowapi.errors import RateLimitExceeded
 from services.AuditoriaService import AuditoriaService
 
 # Domain Schemas
@@ -24,8 +23,7 @@ router = APIRouter()
 
 # Criar as rotas/endpoints: GET, POST, PUT, DELETE
 @router.get("/funcionario/", response_model=List[FuncionarioResponse], tags=["Funcionário"], status_code=status.HTTP_200_OK)
-@limiter.limit(get_rate_limit("moderate"))
-async def get_funcionario(request: Request, db: Session = Depends(get_db),
+async def get_funcionario(db: Session = Depends(get_db),
     current_user: FuncionarioAuth = Depends(require_group([1]))
 ): 
     """Retorna todos os funcionários"""
@@ -59,7 +57,7 @@ async def get_funcionario(id: int, db: Session = Depends(get_db),
         )
 
 @router.post("/funcionario/", response_model=FuncionarioResponse, status_code=status.HTTP_201_CREATED, tags=["Funcionário"])
-async def post_funcionario(funcionario_data: FuncionarioCreate, db: Session = Depends(get_db),
+async def post_funcionario(request: Request, funcionario_data: FuncionarioCreate, db: Session = Depends(get_db),
     current_user: FuncionarioAuth = Depends(require_group([1]))
 ):
     """Cria um novo funcionário"""
@@ -99,7 +97,7 @@ async def post_funcionario(funcionario_data: FuncionarioCreate, db: Session = De
             recurso_id=novo_funcionario.id,
             dados_antigos=None,
             dados_novos=novo_funcionario, # Objeto SQLAlchemy com dados novos
-            request=Request # Request completo para capturar IP e user agent
+            request=request # Request completo para capturar IP e user agent
         )
 
         return novo_funcionario
@@ -113,7 +111,8 @@ async def post_funcionario(funcionario_data: FuncionarioCreate, db: Session = De
         )
 
 @router.put("/funcionario/{id}", response_model=FuncionarioResponse, tags=["Funcionário"], status_code=status.HTTP_200_OK)
-async def put_funcionario(id: int, funcionario_data: FuncionarioUpdate, db: Session = Depends(get_db),
+@limiter.limit(get_rate_limit("critical"))
+async def put_funcionario(request: Request, id: int, funcionario_data: FuncionarioUpdate, db: Session = Depends(get_db),
     current_user: FuncionarioAuth = Depends(require_group([1]))
 ):
     """Atualiza um funcionário existente"""
@@ -160,7 +159,7 @@ async def put_funcionario(id: int, funcionario_data: FuncionarioUpdate, db: Sess
             recurso_id=funcionario.id,
             dados_antigos=dados_antigos_obj, # Objeto SQLAlchemy com dados antigos
             dados_novos=funcionario, # Objeto SQLAlchemy com dados novos
-            request=Request # Request completo para capturar IP e user agent
+            request=request # Request completo para capturar IP e user agent
         )
         
         return funcionario
@@ -190,7 +189,19 @@ async def delete_funcionario(request: Request, id: int, db: Session = Depends(ge
     
         db.delete(funcionario)
         db.commit()
-    
+
+        # Depois de tudo executado e antes do return, registra a ação na auditoria
+        AuditoriaService.registrar_acao(
+            db=db,
+            funcionario_id=current_user.id,
+            acao="DELETE",
+            recurso="FUNCIONARIO",
+            recurso_id=funcionario.id,
+            dados_antigos=funcionario,
+            dados_novos=None,
+            request=request
+        )
+
         return None
     
     except HTTPException:

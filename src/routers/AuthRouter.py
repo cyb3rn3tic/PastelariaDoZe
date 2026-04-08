@@ -1,20 +1,30 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from datetime import timedelta
+from services.AuditoriaService import AuditoriaService
 
-from domain.schemas.AuthSchema import LoginRequest, TokenResponse, RefreshTokenRequest, FuncionarioAuth
+# Domain Schemas
+from domain.schemas.AuthSchema import (
+    LoginRequest, 
+    TokenResponse, 
+    RefreshTokenRequest, 
+    FuncionarioAuth
+)
 
+# Infra
 from infra.orm.FuncionarioModel import FuncionarioDB
 from infra.database import get_db
 from infra.security import verify_password, create_access_token, create_refresh_token, verify_refresh_token
 from infra.dependencies import get_current_active_user
+from infra.rate_limit import limiter, get_rate_limit
 
 from settings import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS
 
 router = APIRouter()
 
 @router.post("/auth/login", response_model=TokenResponse, tags=["Autenticação"], summary="Login de funcionário - pública - retorna access e refresh token")
-async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit(get_rate_limit("critical"))
+async def login(request: Request, login_data: LoginRequest, db: Session = Depends(get_db)):
     """
     Realiza login do funcionário e retorna access token e refresh token
     - **cpf**: CPF do funcionário - **senha**: Senha do funcionário
@@ -50,6 +60,15 @@ async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
             }
         )
 
+        # Registrar auditoria de login
+        AuditoriaService.registrar_acao(
+            db=db,
+            funcionario_id=funcionario.id,
+            acao="LOGIN",
+            recurso="AUTH",
+            request=Request
+        )
+
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
@@ -64,7 +83,8 @@ async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException( status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Erro ao realizar login: {str(e)}" )
     
 @router.post("/auth/refresh", response_model=TokenResponse, tags=["Autenticação"], summary="Refresh token - pública - renova access token")
-async def refresh_token(refresh_data: RefreshTokenRequest, db: Session = Depends(get_db)):
+@limiter.limit(get_rate_limit("critical"))
+async def refresh_token(request: Request, refresh_data: RefreshTokenRequest, db: Session = Depends(get_db)):
     """
     Renova o access token usando um refresh token válido
     - **refresh_token**: Refresh token válido retornado no login

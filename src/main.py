@@ -10,6 +10,7 @@ from routers import ClienteRouter
 from routers import ProdutoRouter
 from routers import AuthRouter
 from routers import AuditoriaRouter
+from routers import HealthRouter
 
 # lifespan - ciclo de vida da aplicação
 from infra import database
@@ -26,9 +27,11 @@ async def lifespan(app: FastAPI):
 
 #FastAPI criação da aplicação
 app = FastAPI(lifespan=lifespan)
+#app = FastAPI() 
 
-#app = FastAPI() # Configuração de Rate Limiting
+# Configuração de Rate Limiting
 app.state.limiter = limiter
+
 # Registrar handler personalizado ANTES de incluir rotas
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
@@ -44,6 +47,7 @@ app.include_router(FuncionarioRouter.router)
 app.include_router(ClienteRouter.router)
 app.include_router(ProdutoRouter.router)
 app.include_router(AuditoriaRouter.router)
+app.include_router(HealthRouter.router)
 
 if __name__ == "__main__":
     uvicorn.run('main:app', host=HOST, port=int(PORT), reload=RELOAD)
