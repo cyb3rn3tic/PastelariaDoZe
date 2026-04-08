@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import List
-from services.AuditoriaService import AuditoriaService
 from slowapi.errors import RateLimitExceeded
+from services.AuditoriaService import AuditoriaService
 
 # Domain Schemas
 from domain.schemas.ClienteSchema import (
