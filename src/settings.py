@@ -32,6 +32,23 @@ elif DB_SGDB == 'mssql': # SQL Server
 else: # SQLite
     STR_DATABASE = f"sqlite:///apiDatabase.db"
 
+# Configurações de database assíncrono
+# Converte string de conexão para async se necessário
+if STR_DATABASE.startswith("sqlite:///"):
+    ASYNC_STR_DATABASE = STR_DATABASE.replace("sqlite:///", "sqlite+aiosqlite:///")
+elif STR_DATABASE.startswith("sqlite://"):
+    ASYNC_STR_DATABASE = STR_DATABASE.replace("sqlite://", "sqlite+aiosqlite:///")
+elif DB_SGDB == 'mysql': # MySQL
+    ASYNC_STR_DATABASE = STR_DATABASE.replace("mysql+pymysql://", "mysql+aiomysql://")
+elif DB_SGDB == 'mssql': # SQL Server
+# Nota: aiomssql não está disponível, mantém síncrono
+    ASYNC_STR_DATABASE = STR_DATABASE
+elif DB_SGDB == 'postgresql': # PostgreSQL
+    ASYNC_STR_DATABASE = STR_DATABASE.replace("postgresql://", "postgresql+asyncpg://")
+else:
+# Para outros bancos, mantém a string original
+    ASYNC_STR_DATABASE = STR_DATABASE
+
 # Configurações JWT
 SECRET_KEY = os.getenv("SECRET_KEY", "uihn87qgr7yw89xnhwq78rj182892uj9u1jxerhm0x1nghj12mm0znvy8oniwerhi9ewrnjhtcu89q34jhry8c34hp")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
