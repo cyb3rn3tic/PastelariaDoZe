@@ -542,25 +542,25 @@ async def get_comanda_produtos(id: int, request: Request, db: AsyncSession = Dep
             if produto:
                 produto_response = ProdutoResponse(id=produto.id, nome=produto.nome, descricao=produto.descricao, foto=produto.foto, valor_unitario=produto.valor_unitario)
         
-        # Construir objeto do funcionário
-        funcionario_response = None
-        if funcionario:
-            funcionario_response = FuncionarioResponse(id=funcionario.id, nome=funcionario.nome, matricula=funcionario.matricula, cpf=funcionario.cpf, telefone=funcionario.telefone, grupo=funcionario.grupo)
+            # Construir objeto do funcionário
+            funcionario_response = None
+            if funcionario:
+                funcionario_response = FuncionarioResponse(id=funcionario.id, nome=funcionario.nome, matricula=funcionario.matricula, cpf=funcionario.cpf, telefone=funcionario.telefone, grupo=funcionario.grupo)
         
-        # Construir response do produto da comanda
-        comanda_produto_response = ComandaProdutosResponse(
-            id=comanda_produto.id,
-            comanda_id=comanda_produto.comanda_id,
-            funcionario_id=comanda_produto.funcionario_id,
-            funcionario=funcionario_response,
-            produto_id=comanda_produto.produto_id,
-            produto=produto_response,
-            quantidade=comanda_produto.quantidade,
-            valor_unitario=comanda_produto.valor_unitario
-        )
+            # Construir response do produto da comanda
+            comanda_produto_response = ComandaProdutosResponse(
+                id=comanda_produto.id,
+                comanda_id=comanda_produto.comanda_id,
+                funcionario_id=comanda_produto.funcionario_id,
+                funcionario=funcionario_response,
+                produto_id=comanda_produto.produto_id,
+                produto=produto_response,
+                quantidade=comanda_produto.quantidade,
+                valor_unitario=comanda_produto.valor_unitario
+            )
         
-        produtos_response.append(comanda_produto_response)
-        
+            produtos_response.append(comanda_produto_response)
+
         return produtos_response
     except HTTPException:
         raise

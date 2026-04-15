@@ -63,7 +63,7 @@ Content-Type: application/json
 Authorization: Bearer {{access_token}}
 
 # token 
-#@access_token = seuToken
+@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzNDM0MzQiLCJpZCI6MSwiZ3J1cG8iOjEsImV4cCI6MTc3NjI2NDcyMiwidHlwZSI6ImFjY2VzcyJ9.YmlUDYmxelLT_cJLDuPmfbxB1LdbLolL3QCPYkzT4dU
 
 ### Adicionar produto à comanda
 POST http://127.0.0.1:8000/comanda/1/produto
