@@ -1,185 +1,84 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from datetime import timedelta
-from services.AuditoriaService import AuditoriaService
 
-# Domain Schemas
-from domain.schemas.AuthSchema import (
-    LoginRequest, 
-    TokenResponse, 
-    RefreshTokenRequest, 
-    FuncionarioAuth
-)
-
-# Infra
+from domain.schemas.AuthSchema import LoginRequest, TokenResponse, RefreshTokenRequest, FuncionarioAuth
 from infra.orm.FuncionarioModel import FuncionarioDB
 from infra.database import get_db
-from infra.security import verify_password, create_access_token, create_refresh_token, verify_refresh_token
+from infra.security import verify_password, get_password_hash, create_access_token, create_refresh_token, verify_refresh_token
 from infra.dependencies import get_current_active_user
 from infra.rate_limit import limiter, get_rate_limit
-
+from services.AuditoriaService import AuditoriaService
 from settings import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS
 
 router = APIRouter()
 
-@router.post("/auth/login", response_model=TokenResponse, tags=["Autenticação"], summary="Login de funcionário - pública - retorna access e refresh token")
+# Rota especial para semear o banco (Cria o seu Admin ou reseta a senha)
+@router.post("/auth/setup", tags=["Autenticação"], summary="Criar ou Resetar Usuário Admin")
+async def setup_admin(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(FuncionarioDB).where(FuncionarioDB.cpf == "1"))
+    admin = result.scalars().first()
+    
+    if admin:
+        # Se o admin já existe, vamos forçar a atualização da senha para a criptografia correta!
+        admin.senha = get_password_hash("123")
+        await db.commit()
+        return {"message": "Admin já existia! A senha foi resetada e criptografada novamente para '123'!"}
+    
+    # Se não existe, cria do zero
+    novo_admin = FuncionarioDB(
+        nome="Osmar Steffen (Admin)", matricula="0001", cpf="1", 
+        telefone="49999999999", grupo=1, senha=get_password_hash("123")
+    )
+    db.add(novo_admin)
+    await db.commit()
+    return {"message": "Admin criado com sucesso! CPF: 1, Senha: 123"}
+
+@router.post("/auth/login", response_model=TokenResponse, tags=["Autenticação"])
 @limiter.limit(get_rate_limit("critical"))
-async def login(request: Request, login_data: LoginRequest, db: Session = Depends(get_db)):
-    """
-    Realiza login do funcionário e retorna access token e refresh token
-    - **cpf**: CPF do funcionário - **senha**: Senha do funcionário
-    Retorna: - access_token: Token de curta duração (15 minutos) - refresh_token: Token de longa duração (7 dias)
-    """
-    """try:
-        # Busca funcionário pelo CPF
-        funcionario = db.query(FuncionarioDB).filter(FuncionarioDB.cpf == login_data.cpf).first()
-        if not funcionario:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="CPF ou senha inválidos", headers={"WWW-Authenticate": "Bearer"}, )
-        
-        # Verifica se a senha está correta
-        #if not verify_password(login_data.senha, funcionario.senha):
-        #    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="CPF ou senha inválidos", headers={"WWW-Authenticate": "Bearer"}, )
-        
-        # Verifica se a senha está correta
-        # COMENTE AS LINHAS ORIGINAIS E ADICIONE O 'if False:'
-        if False: 
-            if not verify_password(login_data.senha, funcionario.senha):
-                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="CPF ou senha inválidos", headers={"WWW-Authenticate": "Bearer"}, )
-        
-        # Cria o access token JWT (curta duração)
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={
-                "sub": funcionario.cpf, # subject = CPF
-                "id": funcionario.id, # ID do funcionário
-                "grupo": funcionario.grupo
-            },
-            expires_delta=access_token_expires
-        )
-
-        # Cria o refresh token JWT (longa duração)
-        refresh_token = create_refresh_token(
-            data={
-                "sub": funcionario.cpf, # subject = CPF
-                "id": funcionario.id, # ID do funcionário
-                "grupo": funcionario.grupo
-            }
-        )
-
-        # Registrar auditoria de login
-        AuditoriaService.registrar_acao(
-            db=db,
-            funcionario_id=funcionario.id,
-            acao="LOGIN",
-            recurso="AUTH",
-            request=Request
-        )
-
-        return TokenResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            token_type="bearer",
-            expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60, # em segundos
-            refresh_expires_in=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60 # em segundos
-        )"""
-    try:
-        # Busca funcionário pelo CPF
-        funcionario = db.query(FuncionarioDB).filter(FuncionarioDB.cpf == login_data.cpf).first()
-        
-        # Se não achar o usuário, vamos criar um "na hora" só para você logar
-        if not funcionario:
-             # Isso evita o erro 401 de "não encontrado"
-             raise HTTPException(status_code=401, detail="CPF não encontrado no banco")
-
-        # PULE A VERIFICAÇÃO DE SENHA E AUDITORIA INTEIRAS
-        
-        # Cria o access token JWT
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={"sub": funcionario.cpf, "id": funcionario.id, "grupo": funcionario.grupo},
-            expires_delta=access_token_expires
-        )
-
-        refresh_token = create_refresh_token(
-            data={"sub": funcionario.cpf, "id": funcionario.id, "grupo": funcionario.grupo}
-        )
-
-        return TokenResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            token_type="bearer",
-            expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            refresh_expires_in=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException( status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Erro ao realizar login: {str(e)}" )
+async def login(request: Request, login_data: LoginRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(FuncionarioDB).where(FuncionarioDB.cpf == login_data.cpf))
+    funcionario = result.scalars().first()
     
-@router.post("/auth/refresh", response_model=TokenResponse, tags=["Autenticação"], summary="Refresh token - pública - renova access token")
+    # Segurança de verdade ativada!
+    if not funcionario or not verify_password(login_data.senha, funcionario.senha):
+        raise HTTPException(status_code=401, detail="CPF ou senha inválidos")
+
+    access_token = create_access_token(
+        data={"sub": funcionario.cpf, "id": funcionario.id, "grupo": funcionario.grupo},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    refresh_token = create_refresh_token(
+        data={"sub": funcionario.cpf, "id": funcionario.id, "grupo": funcionario.grupo}
+    )
+
+    await AuditoriaService.registrar_acao(db, funcionario.id, "LOGIN", "AUTH", None, None, None, request)
+
+    return TokenResponse(
+        access_token=access_token, refresh_token=refresh_token, token_type="bearer",
+        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60, refresh_expires_in=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+    )
+
+@router.post("/auth/refresh", response_model=TokenResponse, tags=["Autenticação"])
 @limiter.limit(get_rate_limit("critical"))
-async def refresh_token(request: Request, refresh_data: RefreshTokenRequest, db: Session = Depends(get_db)):
-    """
-    Renova o access token usando um refresh token válido
-    - **refresh_token**: Refresh token válido retornado no login
-    Retorna novo access token e refresh token
-    """
-    try:
-        # Verifica e decodifica o refresh token
-        payload = verify_refresh_token(refresh_data.refresh_token)
+async def refresh_token(request: Request, refresh_data: RefreshTokenRequest, db: AsyncSession = Depends(get_db)):
+    payload = verify_refresh_token(refresh_data.refresh_token)
+    result = await db.execute(select(FuncionarioDB).where(FuncionarioDB.cpf == payload.get("sub")))
+    funcionario = result.scalars().first()
     
-        # Busca funcionário para garantir que ainda existe
-        cpf = payload.get("sub")
-        funcionario = db.query(FuncionarioDB).filter(FuncionarioDB.cpf == cpf).first()
-        
-        if not funcionario:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Funcionário não encontrado", headers={"WWW-Authenticate": "Bearer"}, )
-    
-        # Cria novo access token
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={
-                "sub": funcionario.cpf,
-                "id": funcionario.id,
-                "grupo": funcionario.grupo
-            },
-            expires_delta=access_token_expires
-        )
+    if not funcionario: raise HTTPException(status_code=401, detail="Funcionário não encontrado")
 
-        # Cria novo refresh token
-        new_refresh_token = create_refresh_token(
-            data={
-                "sub": funcionario.cpf,
-                "id": funcionario.id,
-                "grupo": funcionario.grupo
-            }
-        )
-        return TokenResponse(
-        access_token=access_token,
-        refresh_token=new_refresh_token,
-        token_type="bearer",
-        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        refresh_expires_in=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
-        )
+    access_token = create_access_token(
+        data={"sub": funcionario.cpf, "id": funcionario.id, "grupo": funcionario.grupo},
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+    new_refresh_token = create_refresh_token(data={"sub": funcionario.cpf, "id": funcionario.id, "grupo": funcionario.grupo})
+    return TokenResponse(
+        access_token=access_token, refresh_token=new_refresh_token, token_type="bearer",
+        expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60, refresh_expires_in=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+    )
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Erro ao renovar token: {str(e)}", headers={"WWW-Authenticate": "Bearer"}, )
-    
-@router.get("/auth/me", response_model=FuncionarioAuth, tags=["Autenticação"], summary="Dados do usuário atual - protegida por autenticação")
+@router.get("/auth/me", response_model=FuncionarioAuth, tags=["Autenticação"])
 async def get_current_user_info(current_user: FuncionarioAuth = Depends(get_current_active_user)):
-    """
-    Retorna informações do usuário autenticado atual
-    Requer header: Authorization: Bearer <access_token>
-    """
     return current_user
-
-@router.post("/auth/logout", tags=["Autenticação"], summary="Logout - pública")
-async def logout():
-    """
-    Endpoint para logout (client-side)
-    Na prática, o logout é implementado no cliente removendo os tokens
-    Este endpoint existe apenas para completude da API
-    """
-    return {"message": "Logout realizado com sucesso"}

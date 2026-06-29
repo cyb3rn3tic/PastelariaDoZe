@@ -1,29 +1,30 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from settings import STR_DATABASE
-from sqlalchemy.orm import Session
 
-# engine/conexão -> engine = create_engine("sqlite:///pastelaria_db.db", echo = True)
-# cria o engine do banco de dados
-engine = create_engine(STR_DATABASE, echo=True)
+# Cria o engine assíncrono
+engine = create_async_engine(STR_DATABASE, echo=True)
 
-# session -> Session = sessionmaker(bind=engine)
-# cria a sessão do banco de dados
-Session = sessionmaker(bind=engine, autocommit=False, autoflush=True)
+# Cria a fábrica de sessões assíncronas
+AsyncSessionLocal = async_sessionmaker(
+    bind=engine, 
+    class_=AsyncSession, 
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False
+)
 
-# base/ORM -> Base = declarative_base()
-# para trabalhar com tabelas
 Base = declarative_base()
 
-# cria, caso não existam, as tabelas de todos os modelos que encontrar na aplicação (importados)
+# Cria as tabelas de forma assíncrona
 async def cria_tabelas():
-    Base.metadata.create_all(engine)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     
-# dependência para injetar a sessão do banco de dados nas rotas
-def get_db():
-    db_session = Session()
-    try:
-        yield db_session
-    finally:
-        db_session.close()
+# Dependência injetável para as rotas
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
