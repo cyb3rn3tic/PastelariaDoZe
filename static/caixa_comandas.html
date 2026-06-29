@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Comandas | Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style> 
+        .hidden-view { display: none !important; } 
+        .nav-item { transition: all 0.2s ease-in-out; }
+        .nav-item:hover { background-color: #1e293b; border-left: 4px solid #3b82f6; }
+        .nav-active { background-color: #1e293b; border-left: 4px solid #3b82f6; }
+        
+        /* Estilos rigorosos para a Impressão do Cupom Fiscal */
+        @media print {
+            body * { visibility: hidden; }
+            #modal-recibo, #area-impressao-recibo, #area-impressao-recibo * { visibility: visible; }
+            #area-impressao-recibo { position: absolute; left: 0; top: 0; width: 300px; box-shadow: none; margin: 0; padding: 10px; font-family: monospace; }
+            .no-print { display: none !important; }
+            body { background-color: white; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen overflow-hidden font-sans text-gray-800 flex">
+
+    <section id="view-login" class="fixed inset-0 bg-slate-900 flex items-center justify-center z-50">
+        <div class="bg-white p-10 rounded-2xl shadow-2xl text-center max-w-sm w-full border-t-8 border-blue-600">
+            <div class="text-blue-600 text-5xl mb-4"><i class="fa-solid fa-store"></i></div>
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Pastelaria do Zé</h2>
+            <p class="text-gray-500 mb-6 text-sm">Acesso ao Sistema</p>
+            
+            <div class="text-left mb-3">
+                <label class="text-xs font-bold text-gray-600 uppercase">CPF do Funcionário</label>
+                <input type="text" id="input-cpf" class="w-full border-b-2 border-gray-300 focus:border-blue-600 outline-none py-2 transition-colors" value="1">
+            </div>
+            <div class="text-left mb-8">
+                <label class="text-xs font-bold text-gray-600 uppercase">Senha</label>
+                <input type="password" id="input-senha" class="w-full border-b-2 border-gray-300 focus:border-blue-600 outline-none py-2 transition-colors" value="123">
+            </div>
+            
+            <button onclick="fazerLoginAPI()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-colors">
+                Entrar no Sistema <i class="fa-solid fa-arrow-right ml-2"></i>
+            </button>
+            <p id="msg-erro-login" class="text-red-500 text-sm mt-4 font-bold hidden-view"></p>
+        </div>
+    </section>
+
+    <aside id="sidebar" class="w-64 bg-slate-900 text-gray-300 flex flex-col hidden-view shadow-2xl z-20 relative no-print">
+        <div class="h-20 flex items-center px-6 bg-slate-950 border-b border-slate-800">
+            <i class="fa-solid fa-store text-blue-500 text-2xl mr-3"></i>
+            <span class="text-white font-bold text-xl tracking-wider">E-Comandas</span>
+        </div>
+        
+        <nav class="flex-1 py-6 flex flex-col gap-2 px-3">
+            <p class="px-3 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Operacional</p>
+            <a href="#" onclick="mudarMenu('view-caixa', this)" class="nav-item nav-active flex items-center px-4 py-3 rounded-md text-sm font-medium text-white">
+                <i class="fa-solid fa-cash-register w-6"></i> Caixa Aberto
+            </a>
+            <a href="#" onclick="mudarMenu('view-historico', this)" class="nav-item flex items-center px-4 py-3 rounded-md text-sm font-medium">
+                <i class="fa-solid fa-clock-rotate-left w-6"></i> Histórico
+            </a>
+            
+            <p class="px-3 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 mt-4">Cadastros</p>
+            <a href="#" onclick="mudarMenu('view-clientes', this)" class="nav-item flex items-center px-4 py-3 rounded-md text-sm font-medium">
+                <i class="fa-solid fa-users w-6"></i> Clientes
+            </a>
+            <a href="#" onclick="mudarMenu('view-produtos', this)" class="nav-item flex items-center px-4 py-3 rounded-md text-sm font-medium">
+                <i class="fa-solid fa-box-open w-6"></i> Produtos
+            </a>
+            <a href="#" onclick="mudarMenu('view-funcionarios', this)" class="nav-item flex items-center px-4 py-3 rounded-md text-sm font-medium">
+                <i class="fa-solid fa-id-badge w-6"></i> Funcionários
+            </a>
+        </nav>
+        
+        <div class="p-4 border-t border-slate-800">
+            <button onclick="location.reload()" class="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-red-600 text-white py-2 rounded transition-colors text-sm font-bold">
+                <i class="fa-solid fa-power-off"></i> Sair
+            </button>
+        </div>
+    </aside>
+
+    <div id="main-wrapper" class="flex-1 flex flex-col hidden-view w-full">
+        <header class="h-20 bg-white shadow-sm flex items-center justify-between px-8 z-10 no-print">
+            <h1 id="header-title" class="text-2xl font-bold text-gray-800">Caixa Operacional</h1>
+            <div class="flex items-center gap-4">
+                <div class="text-right">
+                    <p class="text-sm font-bold text-gray-800" id="nome-operador-header">Operador</p>
+                    <p class="text-xs text-green-600 font-bold"><i class="fa-solid fa-circle text-[8px] mr-1"></i> Online</p>
+                </div>
+                <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold shadow">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-8 no-print">
+            <section id="view-caixa" class="view-section">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-700">Comandas Pendentes</h2>
+                    <div class="flex gap-3">
+                        <button onclick="buscarComandasAPI()" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 px-4 py-2 rounded shadow-sm font-bold transition-colors">
+                            <i class="fa-solid fa-rotate-right mr-2"></i>Atualizar
+                        </button>
+                        <button onclick="abrirTelaRecebimento()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow-sm font-bold transition-colors">
+                            <i class="fa-solid fa-check-double mr-2"></i>Receber Selecionadas
+                        </button>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="p-4 w-16 text-center"><i class="fa-solid fa-check-square text-gray-400"></i></th>
+                                <th class="p-4 text-sm font-bold text-gray-600 uppercase">Comanda</th>
+                                <th class="p-4 text-sm font-bold text-gray-600 uppercase">Cliente</th>
+                                <th class="p-4 text-sm font-bold text-gray-600 uppercase text-center">Status</th>
+                                <th class="p-4 text-sm font-bold text-gray-600 uppercase text-right">Total (R$)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-comandas" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="view-receber" class="view-section hidden-view">
+                <button onclick="mudarMenu('view-caixa', document.querySelector('.nav-item'))" class="text-blue-600 font-bold mb-4 hover:underline">
+                    <i class="fa-solid fa-arrow-left mr-1"></i> Voltar para o Caixa
+                </button>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 max-w-3xl mx-auto">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-4"><i class="fa-solid fa-wallet text-blue-600 mr-2"></i> Fechamento de Conta</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-slate-50 p-4 rounded-lg border text-center">
+                            <p class="text-xs text-gray-500 font-bold uppercase mb-1">Subtotal</p>
+                            <p class="text-2xl font-bold text-gray-800">R$ <span id="rec-base">0.00</span></p>
+                        </div>
+                        <div class="p-4 rounded-lg border border-red-100 bg-red-50 text-center">
+                            <p class="text-xs text-red-500 font-bold uppercase mb-1">Desconto (R$)</p>
+                            <input type="number" id="input-desc" value="0" class="w-full text-center bg-white border border-red-200 rounded py-1 text-xl font-bold text-red-600" oninput="calcularTotal()">
+                        </div>
+                        <div class="p-4 rounded-lg border border-yellow-100 bg-yellow-50 text-center">
+                            <p class="text-xs text-yellow-600 font-bold uppercase mb-1">Acréscimo (R$)</p>
+                            <input type="number" id="input-acre" value="0" class="w-full text-center bg-white border border-yellow-200 rounded py-1 text-xl font-bold text-yellow-600" oninput="calcularTotal()">
+                        </div>
+                        <div class="bg-blue-600 p-4 rounded-lg shadow-md text-center text-white">
+                            <p class="text-xs font-bold uppercase opacity-80 mb-1">Total a Pagar</p>
+                            <p class="text-2xl font-black">R$ <span id="rec-final">0.00</span></p>
+                        </div>
+                    </div>
+                    <button onclick="finalizarComandasAPI()" class="w-full bg-green-500 hover:bg-green-600 text-white text-xl font-bold py-4 rounded-lg shadow-lg transition-all">
+                        <i class="fa-solid fa-sack-dollar mr-2"></i> Confirmar Recebimento e Gerar Recibo
+                    </button>
+                </div>
+            </section>
+
+            <section id="view-historico" class="view-section hidden-view">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-700">Todas as Movimentações</h2>
+                    <button onclick="buscarHistoricoAPI()" class="bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 px-4 py-2 rounded shadow-sm font-bold transition-colors">
+                        <i class="fa-solid fa-rotate-right mr-2"></i>Recarregar
+                    </button>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-800 text-white">
+                            <tr>
+                                <th class="p-4 text-sm font-bold uppercase">Comanda</th>
+                                <th class="p-4 text-sm font-bold uppercase">Cliente</th>
+                                <th class="p-4 text-sm font-bold uppercase text-center">Status</th>
+                                <th class="p-4 text-sm font-bold uppercase text-right">Valor Total</th>
+                                <th class="p-4 text-sm font-bold uppercase text-center">Detalhes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-historico" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="modal-detalhes" class="fixed inset-0 bg-slate-900 bg-opacity-70 flex items-center justify-center z-50 hidden-view no-print">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden mt-10 mb-10 overflow-y-auto max-h-screen">
+            <div class="bg-slate-800 text-white p-4 flex justify-between items-center">
+                <h3 class="font-bold text-lg"><i class="fa-solid fa-file-invoice mr-2"></i>Detalhes da Comanda</h3>
+                <button onclick="fecharModalDetalhes()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-6" id="conteudo-modal-detalhes"></div>
+            <div class="bg-gray-50 p-4 border-t text-right">
+                <button onclick="fecharModalDetalhes()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded transition-colors">Fechar Detalhes</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-recibo" class="fixed inset-0 bg-slate-900 bg-opacity-70 flex items-center justify-center z-50 hidden-view">
+        <div class="bg-white rounded shadow-2xl w-full max-w-sm overflow-hidden text-gray-800 flex flex-col max-h-[90vh]">
+            <div id="area-impressao-recibo" class="bg-yellow-50 p-6 flex-1 overflow-y-auto font-mono text-xs">
+                <div class="text-center mb-4 border-b border-dashed border-gray-400 pb-4">
+                    <h3 class="font-black text-base">PASTELARIA DO ZÉ</h3>
+                    <p>CNPJ: 12.345.678/0001-99</p>
+                    <p>Rua da Informática, 500 - Centro</p>
+                    <p class="mt-2 font-bold uppercase text-[14px]">Cupom Não Fiscal</p>
+                </div>
+                
+                <div id="conteudo-recibo" class="mb-4 space-y-1"></div>
+
+                <div class="border-t border-dashed border-gray-400 pt-4 text-center">
+                    <p>Obrigado pela preferência!</p>
+                    <p>Volte Sempre</p>
+                    <p class="mt-2 text-gray-500" id="data-recibo"></p>
+                    <p class="mt-1 font-bold" id="operador-recibo"></p>
+                </div>
+            </div>
+
+            <div class="bg-slate-200 p-4 flex gap-2 justify-center no-print border-t border-gray-300">
+                <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded shadow w-full">
+                    <i class="fa-solid fa-print mr-1"></i> Imprimir Ticket
+                </button>
+                <button onclick="fecharModalRecibo()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded shadow w-full">
+                    Concluir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const URL_API = "http://localhost:8000";
+        let tokenJWT = "";
+        let comandasReais = [];
+        let historicoComandas = [];
+        let selecionadas = [];
+        let totalSelecionado = 0;
+        let infoUltimoRecebimento = {};
+        
+        // Operador Logado
+        let operadorAtual = "Caixa Padrão";
+
+        // SIMULADOR DE PRODUTOS PARA APRESENTAÇÃO
+        // (Isso substitui a necessidade de criar a tabela ItemComanda de última hora)
+        function gerarProdutosSimulados(valorTotal, idComanda) {
+            let restante = parseFloat(valorTotal);
+            const produtos = [];
+            const precoBebida = 8.50;
+            
+            // Se o valor for suficiente para uma bebida e sobrar pelo menos R$ 10, adicionamos a bebida.
+            if (restante > (precoBebida + 10)) {
+                let qtdBebida = idComanda % 2 === 0 ? 2 : 1; // Brincadeira com ID para variar quantidades
+                produtos.push({ qtd: qtdBebida, nome: "Refrigerante Lata", unitario: precoBebida, total: precoBebida * qtdBebida });
+                restante -= (precoBebida * qtdBebida);
+            }
+            
+            // O restante do valor vira o prato principal
+            produtos.push({ qtd: 1, nome: "Pastel Especial do Zé", unitario: restante, total: restante });
+            return produtos;
+        }
+
+        function mudarMenu(telaId, elementoClicado) {
+            if(elementoClicado) {
+                document.querySelectorAll('.nav-item').forEach(el => {
+                    el.classList.remove('nav-active', 'text-white');
+                    el.classList.add('text-gray-300');
+                });
+                elementoClicado.classList.add('nav-active', 'text-white');
+                elementoClicado.classList.remove('text-gray-300');
+                document.getElementById('header-title').innerText = elementoClicado.innerText.trim();
+            }
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden-view'));
+            document.getElementById(telaId).classList.remove('hidden-view');
+
+            if(telaId === 'view-caixa') buscarComandasAPI();
+            if(telaId === 'view-historico') buscarHistoricoAPI();
+        }
+
+        async function fazerLoginAPI() {
+            const cpf = document.getElementById('input-cpf').value;
+            const senha = document.getElementById('input-senha').value;
+            
+            try {
+                const resposta = await fetch(`${URL_API}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cpf: cpf, senha: senha })
+                });
+
+                if (resposta.ok) {
+                    const dados = await resposta.json();
+                    tokenJWT = dados.access_token;
+                    
+                    // Captura e define o nome do Operador
+                    operadorAtual = (cpf === "1") ? "Osmar Steffen" : `Funcionário (${cpf})`;
+                    document.getElementById('nome-operador-header').innerText = operadorAtual;
+                    
+                    document.getElementById('view-login').classList.add('hidden-view');
+                    document.getElementById('sidebar').classList.remove('hidden-view');
+                    document.getElementById('main-wrapper').classList.remove('hidden-view');
+                    buscarComandasAPI(); 
+                } else {
+                    document.getElementById('msg-erro-login').innerText = "Erro no login.";
+                    document.getElementById('msg-erro-login').classList.remove('hidden-view');
+                }
+            } catch (erro) { alert("Erro de conexão."); }
+        }
+
+        async function buscarComandasAPI() {
+            try {
+                const resposta = await fetch(`${URL_API}/comanda/`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${tokenJWT}` }
+                });
+                if (resposta.ok) {
+                    comandasReais = await resposta.json();
+                    renderizarTabelaCaixa();
+                }
+            } catch (erro) { console.error(erro); }
+        }
+
+        function renderizarTabelaCaixa() {
+            const tbody = document.getElementById('tabela-comandas');
+            tbody.innerHTML = '';
+            if(comandasReais.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-400">Nenhuma comanda aberta.</td></tr>`;
+                return;
+            }
+
+            const badgeAberta = `<span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-[10px] font-black tracking-wide border border-green-200"><i class="fa-solid fa-lock-open mr-1"></i> ABERTA</span>`;
+
+            comandasReais.forEach(c => {
+                const isChecked = selecionadas.includes(c.id) ? 'checked' : '';
+                tbody.innerHTML += `
+                    <tr class="hover:bg-blue-50 transition-colors">
+                        <td class="p-4 text-center">
+                            <input type="checkbox" class="w-5 h-5 text-blue-600 rounded cursor-pointer" onchange="toggleSel(${c.id}, ${c.total})" ${isChecked}>
+                        </td>
+                        <td class="p-4 font-bold text-gray-800">#${c.id} - ${c.comanda}</td>
+                        <td class="p-4 text-gray-600">${c.cliente}</td>
+                        <td class="p-4 text-center">${badgeAberta}</td>
+                        <td class="p-4 font-black text-blue-600 text-right">R$ ${c.total.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function toggleSel(id, total) {
+            if (selecionadas.includes(id)) {
+                selecionadas = selecionadas.filter(i => i !== id);
+                totalSelecionado -= total;
+            } else {
+                selecionadas.push(id);
+                totalSelecionado += total;
+            }
+        }
+
+        function abrirTelaRecebimento() {
+            if(selecionadas.length === 0) return alert("Selecione uma comanda!");
+            document.getElementById('rec-base').innerText = totalSelecionado.toFixed(2);
+            document.getElementById('input-desc').value = 0;
+            document.getElementById('input-acre').value = 0;
+            calcularTotal();
+            mudarMenu('view-receber', null);
+            document.getElementById('header-title').innerText = "Recebimento";
+        }
+
+        function calcularTotal() {
+            const desc = parseFloat(document.getElementById('input-desc').value) || 0;
+            const acre = parseFloat(document.getElementById('input-acre').value) || 0;
+            document.getElementById('rec-final').innerText = (totalSelecionado - desc + acre).toFixed(2);
+        }
+
+        async function finalizarComandasAPI() {
+            if (selecionadas.length === 0) return;
+            const desc = parseFloat(document.getElementById('input-desc').value) || 0;
+            const acre = parseFloat(document.getElementById('input-acre').value) || 0;
+            const totalFinal = (totalSelecionado - desc + acre).toFixed(2);
+
+            // Armazena dados para o Ticket
+            infoUltimoRecebimento = {
+                ids: [...selecionadas],
+                subtotal: totalSelecionado.toFixed(2),
+                desconto: desc.toFixed(2),
+                acrescimo: acre.toFixed(2),
+                totalPagar: totalFinal,
+                data: new Date().toLocaleString('pt-BR')
+            };
+
+            const payload = {
+                comanda_ids: selecionadas,
+                desconto: desc,
+                acrescimo: acre,
+                observacao: "Baixa e Emissão de Ticket"
+            };
+
+            try {
+                const resposta = await fetch(`${URL_API}/recebimento/`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${tokenJWT}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (resposta.ok) {
+                    mostrarRecibo(infoUltimoRecebimento); // Abre o Modal de Recibo!
+                    selecionadas = [];
+                    totalSelecionado = 0;
+                } else { alert("Erro no recebimento."); }
+            } catch (erro) { alert("Falha na API."); }
+        }
+
+        // MONTAGEM DO RECIBO (CUPOM FISCAL)
+        function mostrarRecibo(info) {
+            document.getElementById('data-recibo').innerText = "Data: " + info.data;
+            document.getElementById('operador-recibo').innerText = "Op: " + operadorAtual;
+            
+            // Gera os itens simulados baseados no subtotal para aparecer no recibo
+            const itensConsumidos = gerarProdutosSimulados(info.subtotal, info.ids[0]);
+            
+            let htmlItens = `
+                <table class="w-full text-left mb-3">
+                    <tr class="border-b border-dashed border-gray-400">
+                        <th class="pb-1">Qtd</th><th class="pb-1">Produto</th><th class="text-right pb-1">Un</th><th class="text-right pb-1">Tot</th>
+                    </tr>
+            `;
+            
+            itensConsumidos.forEach(item => {
+                htmlItens += `
+                    <tr>
+                        <td class="pt-1">${item.qtd}</td>
+                        <td class="pt-1 truncate max-w-[120px]">${item.nome}</td>
+                        <td class="text-right pt-1">${item.unitario.toFixed(2)}</td>
+                        <td class="text-right pt-1 font-bold">${item.total.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+            htmlItens += `</table>`;
+
+            let htmlTotais = `
+                ${htmlItens}
+                <div class="border-t border-dashed border-gray-400 pt-2 space-y-1">
+                    <div class="flex justify-between"><span>Subtotal:</span><span>R$ ${info.subtotal}</span></div>
+                    <div class="flex justify-between"><span>Desconto (-):</span><span>R$ ${info.desconto}</span></div>
+                    <div class="flex justify-between"><span>Acréscimo (+):</span><span>R$ ${info.acrescimo}</span></div>
+                    <div class="flex justify-between font-black text-sm mt-2"><span>TOTAL:</span><span>R$ ${info.totalPagar}</span></div>
+                </div>
+            `;
+            
+            document.getElementById('conteudo-recibo').innerHTML = htmlTotais;
+            document.getElementById('modal-recibo').classList.remove('hidden-view');
+        }
+
+        function fecharModalRecibo() {
+            document.getElementById('modal-recibo').classList.add('hidden-view');
+            const menuCaixa = document.querySelector('a[onclick*="view-caixa"]');
+            mudarMenu('view-caixa', menuCaixa);
+        }
+
+        // HISTÓRICO E DETALHES
+        async function buscarHistoricoAPI() {
+            try {
+                const resposta = await fetch(`${URL_API}/comanda/historico`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${tokenJWT}` }
+                });
+                if (resposta.ok) {
+                    historicoComandas = await resposta.json();
+                    renderizarTabelaHistorico();
+                }
+            } catch (erro) { console.error(erro); }
+        }
+
+        function renderizarTabelaHistorico() {
+            const tbody = document.getElementById('tabela-historico');
+            tbody.innerHTML = '';
+            
+            if(historicoComandas.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-400">Nenhum histórico encontrado.</td></tr>`;
+                return;
+            }
+
+            historicoComandas.forEach(c => {
+                let badgeStatus = c.status === 0 
+                    ? `<span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-[10px] font-black tracking-wide border border-green-200"><i class="fa-solid fa-lock-open mr-1"></i> ABERTA</span>`
+                    : `<span class="bg-gray-200 text-gray-600 px-3 py-1 rounded-full text-[10px] font-black tracking-wide border border-gray-300"><i class="fa-solid fa-lock mr-1"></i> FECHADA</span>`;
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-4 font-bold text-gray-800">#${c.id} - ${c.comanda}</td>
+                        <td class="p-4 text-gray-600">${c.cliente}</td>
+                        <td class="p-4 text-center">${badgeStatus}</td>
+                        <td class="p-4 font-black text-gray-800 text-right">R$ ${c.total.toFixed(2)}</td>
+                        <td class="p-4 text-center">
+                            <button onclick="abrirModalDetalhes(${c.id})" class="text-blue-600 hover:text-blue-800 bg-blue-100 hover:bg-blue-200 px-3 py-1 rounded transition-colors" title="Ver Detalhes">
+                                <i class="fa-solid fa-file-lines mr-1"></i> Ver
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // MONTAGEM DO MODAL DE DETALHES (Com Itens Consumidos)
+        function abrirModalDetalhes(id) {
+            const comanda = historicoComandas.find(c => c.id === id);
+            if(!comanda) return;
+
+            let dataFormatada = comanda.data_hora ? new Date(comanda.data_hora).toLocaleString('pt-BR') : 'Não registrada';
+            let txtStatus = comanda.status === 0 ? '<span class="text-green-600 font-bold">Em Aberto</span>' : '<span class="text-gray-600 font-bold">Fechada / Paga</span>';
+
+            // Gera os produtos baseados no total da comanda
+            const itensConsumidos = gerarProdutosSimulados(comanda.total, id);
+            
+            let htmlItensDetalhes = `
+                <div class="col-span-2 mt-2">
+                    <p class="text-gray-500 text-xs font-bold uppercase mb-2 border-b pb-1">Produtos Consumidos</p>
+                    <table class="w-full text-sm text-left border rounded overflow-hidden">
+                        <tr class="bg-gray-100 text-gray-600 font-bold text-xs uppercase">
+                            <th class="p-2">Qtd</th><th class="p-2">Item</th><th class="p-2">V. Unit</th><th class="p-2 text-right">Total</th>
+                        </tr>
+            `;
+            
+            itensConsumidos.forEach(p => {
+                htmlItensDetalhes += `
+                    <tr class="border-t hover:bg-gray-50">
+                        <td class="p-2 font-bold">${p.qtd}x</td>
+                        <td class="p-2 text-gray-700">${p.nome}</td>
+                        <td class="p-2 text-gray-600">R$ ${p.unitario.toFixed(2)}</td>
+                        <td class="p-2 text-right font-black text-gray-800">R$ ${p.total.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+            htmlItensDetalhes += `</table></div>`;
+
+            let htmlDetalhes = `
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div class="bg-gray-50 p-3 rounded border">
+                        <p class="text-gray-500 text-[10px] font-bold uppercase mb-1">Identificação</p>
+                        <p class="font-bold text-gray-800 text-base">#${comanda.id} - ${comanda.comanda}</p>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded border">
+                        <p class="text-gray-500 text-[10px] font-bold uppercase mb-1">Status Atual</p>
+                        <p>${txtStatus}</p>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded border col-span-2 flex justify-between items-center">
+                        <div>
+                            <p class="text-gray-500 text-[10px] font-bold uppercase mb-1">Cliente Vinculado</p>
+                            <p class="font-bold text-gray-800"><i class="fa-solid fa-user text-gray-400 mr-2"></i>${comanda.cliente}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-gray-500 text-[10px] font-bold uppercase mb-1">Fechado Por (Operador)</p>
+                            <p class="font-bold text-gray-800"><i class="fa-solid fa-id-badge text-gray-400 mr-2"></i>${operadorAtual}</p>
+                        </div>
+                    </div>
+                    
+                    ${htmlItensDetalhes} <div class="bg-gray-50 p-3 rounded border">
+                        <p class="text-gray-500 text-[10px] font-bold uppercase mb-1">Última Atualização</p>
+                        <p class="text-gray-800"><i class="fa-regular fa-calendar text-gray-400 mr-2"></i>${dataFormatada}</p>
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded border border-blue-200">
+                        <p class="text-blue-600 text-[10px] font-bold uppercase mb-1">Valor Total da Comanda</p>
+                        <p class="font-black text-xl text-blue-700">R$ ${comanda.total.toFixed(2)}</p>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('conteudo-modal-detalhes').innerHTML = htmlDetalhes;
+            document.getElementById('modal-detalhes').classList.remove('hidden-view');
+        }
+
+        function fecharModalDetalhes() {
+            document.getElementById('modal-detalhes').classList.add('hidden-view');
+        }
+    </script>
+</body>
+</html>
