@@ -31,7 +31,7 @@ class AuditoriaService:
             )
     
             db.add(auditoria)
-            await db.commit() # Agora usa await
+            await db.commit()
             return True
         except Exception:
             await db.rollback()

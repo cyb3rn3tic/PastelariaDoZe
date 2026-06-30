@@ -25,12 +25,27 @@ async def post_funcionario(
     db: AsyncSession = Depends(get_db),
     current_user: FuncionarioAuth = Depends(require_group([1]))
 ):
-    # O Router só chama o serviço!
     novo_func = await FuncionarioService.criar(db, dados)
     
-    # Auditoria mantida (apenas adapte o AuditoriaService para ser async se desejar depois)
     await AuditoriaService.registrar_acao(
         db=db, funcionario_id=current_user.id, acao="CREATE", recurso="FUNCIONARIO",
         recurso_id=novo_func.id, dados_antigos=None, dados_novos=novo_func, request=request
     )
     return novo_func
+
+@router.delete("/funcionario/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Funcionário"])
+async def delete_funcionario(
+    id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: FuncionarioAuth = Depends(require_group([1]))
+):
+    # A exclusão é delegada ao serviço, mantendo o padrão da sua arquitetura
+    await FuncionarioService.deletar(db, id)
+    
+    # Registro automático da exclusão na tabela de auditoria
+    await AuditoriaService.registrar_acao(
+        db=db, funcionario_id=current_user.id, acao="DELETE", recurso="FUNCIONARIO",
+        recurso_id=id, dados_antigos=None, dados_novos=None, request=request
+    )
+    return None
