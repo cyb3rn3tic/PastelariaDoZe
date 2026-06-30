@@ -37,6 +37,7 @@ app.add_middleware(
 # Configuração de Rate Limiting
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+print(" Rate Limiting Handler registrado")
 
 # Tratamento Global de Erros de Banco de Dados
 @app.exception_handler(Exception)
@@ -58,6 +59,7 @@ app.include_router(AuthRouter.router)
 app.include_router(FuncionarioRouter.router)
 app.include_router(ClienteRouter.router)
 app.include_router(ProdutoRouter.router)
+app.include_router(ComandaRouter.router)
 app.include_router(AuditoriaRouter.router)
 app.include_router(HealthRouter.router)
 app.include_router(ComandaRouter.router)
