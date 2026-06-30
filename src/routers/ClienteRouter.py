@@ -41,3 +41,5 @@ async def delete_cliente(request: Request, id: int, db: AsyncSession = Depends(g
     cliente = await ClienteService.deletar(db, id)
     await AuditoriaService.registrar_acao(db, current_user.id, "DELETE", "CLIENTE", id, cliente, None, request)
     return None
+
+#Osmar Steffen

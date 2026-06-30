@@ -27,3 +27,5 @@ class FuncionarioAuth(BaseModel):
     matricula: str
     cpf: str
     grupo: int
+
+    #Osmar Steffen

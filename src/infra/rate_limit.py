@@ -53,3 +53,5 @@ RATE_LIMITS = {
 # Retorna o rate limit para um tipo de endpoint
 def get_rate_limit(endpoint_type: str) -> str:
     return RATE_LIMITS.get(endpoint_type, RATE_LIMITS["default"])
+
+#Osmar Steffen

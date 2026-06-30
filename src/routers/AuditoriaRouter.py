@@ -31,10 +31,8 @@ async def listar_auditoria(
     Lista registros de auditoria com filtros opcionais. - Apenas administradores podem acessar.
     """
     try:
-        # Construir query base com joins manuais
         query = db.query(AuditoriaDB, FuncionarioDB).join(FuncionarioDB, FuncionarioDB.id == AuditoriaDB.funcionario_id)
         
-        # Aplicar filtros
         if funcionario_id:
             query = query.filter(AuditoriaDB.funcionario_id == funcionario_id)
         
@@ -114,3 +112,5 @@ async def listar_acoes_disponiveis(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erro ao listar ações e recursos: {str(e)}"
         )
+    
+    #Osmar Steffen

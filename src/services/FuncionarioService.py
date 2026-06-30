@@ -48,3 +48,5 @@ class FuncionarioService:
         await db.delete(funcionario)
         await db.commit()
         return True
+    
+    #Osmar Steffen

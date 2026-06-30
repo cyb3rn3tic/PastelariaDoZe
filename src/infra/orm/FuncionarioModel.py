@@ -12,3 +12,5 @@ class FuncionarioDB(database.Base):
     telefone = Column(CHAR(11), nullable=False)
     grupo = Column(Integer, nullable=False)
     senha = Column(VARCHAR(200), nullable=False)
+
+    #Osmar Steffen

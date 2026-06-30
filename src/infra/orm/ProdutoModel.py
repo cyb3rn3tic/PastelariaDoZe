@@ -10,3 +10,5 @@ class ProdutoDB(database.Base):
     descricao = Column(VARCHAR(10), nullable=False)
     foto = Column(BLOB, nullable=False)
     valor_unitario = Column(DECIMAL(11,2), nullable=False)
+
+    #Osmar Steffen

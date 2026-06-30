@@ -45,3 +45,5 @@ def require_group(group_required: list[int] = None):
             raise HTTPException(status_code=403, detail="Permissão negada - nível insuficiente")
         return current_user
     return check_group
+
+#Osmar Steffen

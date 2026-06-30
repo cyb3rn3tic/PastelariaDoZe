@@ -65,3 +65,5 @@ app.include_router(CaixaRouter.router)
 
 if __name__ == "__main__":
     uvicorn.run('main:app', host=HOST, port=int(PORT), reload=RELOAD)
+
+    #Osmar Steffen

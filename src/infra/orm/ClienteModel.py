@@ -9,3 +9,5 @@ class ClienteDB(database.Base):
     nome = Column(VARCHAR(100), nullable=False)
     cpf = Column(CHAR(11), unique=True, nullable=False, index=True)
     telefone = Column(CHAR(11), nullable=False)
+
+    #Osmar Steffen

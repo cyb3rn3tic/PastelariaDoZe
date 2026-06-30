@@ -74,3 +74,5 @@ async def delete_comanda(
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Erro ao excluir comanda: {str(e)}")
+    
+    #Osmar Steffen

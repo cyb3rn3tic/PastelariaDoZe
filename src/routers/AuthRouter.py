@@ -21,7 +21,7 @@ async def setup_admin(db: AsyncSession = Depends(get_db)):
     admin = result.scalars().first()
     
     if admin:
-        # Se o admin já existe, vamos forçar a atualização da senha para a criptografia correta!
+        # Se o admin já existe, força a atualização da senha para a criptografia correta!
         admin.senha = get_password_hash("123")
         await db.commit()
         return {"message": "Admin já existia! A senha foi resetada e criptografada novamente para '123'!"}
@@ -41,7 +41,6 @@ async def login(request: Request, login_data: LoginRequest, db: AsyncSession = D
     result = await db.execute(select(FuncionarioDB).where(FuncionarioDB.cpf == login_data.cpf))
     funcionario = result.scalars().first()
     
-    # Segurança de verdade ativada!
     if not funcionario or not verify_password(login_data.senha, funcionario.senha):
         raise HTTPException(status_code=401, detail="CPF ou senha inválidos")
 
@@ -82,3 +81,5 @@ async def refresh_token(request: Request, refresh_data: RefreshTokenRequest, db:
 @router.get("/auth/me", response_model=FuncionarioAuth, tags=["Autenticação"])
 async def get_current_user_info(current_user: FuncionarioAuth = Depends(get_current_active_user)):
     return current_user
+
+#Osmar Steffen

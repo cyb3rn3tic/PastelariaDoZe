@@ -26,3 +26,5 @@ class AuditoriaResponse(BaseModel):
     ip_address: Optional[str] = None
     user_agent: Optional[str] = None
     data_hora: datetime
+
+#Osmar Steffen
