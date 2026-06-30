@@ -29,7 +29,7 @@ async def post_funcionario(
     novo_func = await FuncionarioService.criar(db, dados)
     
     # Auditoria mantida (apenas adapte o AuditoriaService para ser async se desejar depois)
-    AuditoriaService.registrar_acao(
+    await AuditoriaService.registrar_acao(
         db=db, funcionario_id=current_user.id, acao="CREATE", recurso="FUNCIONARIO",
         recurso_id=novo_func.id, dados_antigos=None, dados_novos=novo_func, request=request
     )

@@ -5,9 +5,9 @@ class FuncionarioCreate(BaseModel):
     nome: str
     matricula: str
     cpf: str
-    telefone: str = None 
+    telefone: Optional[str] = None 
     grupo: int
-    senha: str = None
+    senha: str
 
 class FuncionarioUpdate(BaseModel):
     nome: Optional[str] = None
