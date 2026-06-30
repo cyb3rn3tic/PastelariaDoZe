@@ -40,7 +40,6 @@ async def delete_funcionario(
     db: AsyncSession = Depends(get_db),
     current_user: FuncionarioAuth = Depends(require_group([1]))
 ):
-    # A exclusão é delegada ao serviço, mantendo o padrão da sua arquitetura
     await FuncionarioService.deletar(db, id)
     
     # Registro automático da exclusão na tabela de auditoria
@@ -49,3 +48,5 @@ async def delete_funcionario(
         recurso_id=id, dados_antigos=None, dados_novos=None, request=request
     )
     return None
+
+#Osmar Steffen

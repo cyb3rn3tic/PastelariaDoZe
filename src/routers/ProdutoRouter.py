@@ -45,3 +45,5 @@ async def delete_produto(request: Request, id: int, db: AsyncSession = Depends(g
     produto = await ProdutoService.deletar(db, id)
     await AuditoriaService.registrar_acao(db, current_user.id, "DELETE", "PRODUTO", id, produto, None, request)
     return None
+
+#Osmar Steffen

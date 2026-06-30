@@ -218,3 +218,5 @@ async def liveness_check():
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "uptime": "running"
     }    
+
+#Osmar Steffen

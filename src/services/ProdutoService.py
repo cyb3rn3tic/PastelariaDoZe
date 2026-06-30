@@ -49,3 +49,5 @@ class ProdutoService:
         await db.delete(produto)
         await db.commit()
         return produto
+    
+    #Osmar Steffen

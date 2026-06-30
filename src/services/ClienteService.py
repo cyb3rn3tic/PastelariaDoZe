@@ -50,3 +50,5 @@ class ClienteService:
         await db.delete(cliente)
         await db.commit()
         return cliente
+    
+    #Osmar Steffen

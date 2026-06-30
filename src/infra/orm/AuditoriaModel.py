@@ -15,3 +15,5 @@ class AuditoriaDB(Base):
     ip_address = Column(String(45), nullable=True) # IP do cliente
     user_agent = Column(Text, nullable=True) # User agent do navegador
     data_hora = Column(DateTime, nullable=False)
+
+    #Osmar Steffen

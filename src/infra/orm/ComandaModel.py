@@ -11,3 +11,5 @@ class ComandaDB(Base):
     total = Column(Float, default=0.0)
     status = Column(Integer, default=0) # 0 = Aberta, 1 = Fechada
     data_hora = Column(DateTime, default=datetime.now)
+
+    #Osmar Steffen

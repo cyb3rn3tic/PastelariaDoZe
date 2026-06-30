@@ -67,3 +67,5 @@ def verify_refresh_token(token: str) -> dict:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token inválido", headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    #Osmar Steffen

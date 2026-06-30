@@ -36,3 +36,5 @@ class AuditoriaService:
         except Exception:
             await db.rollback()
             return False
+        
+        #Osmar Steffen

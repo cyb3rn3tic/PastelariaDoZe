@@ -15,3 +15,5 @@ class RecebimentoRequest(BaseModel):
 async def efetuar_recebimento(dados: RecebimentoRequest, db: AsyncSession = Depends(get_db), current_user = Depends(get_current_active_user)):
     await ComandaService.fechar_comandas(db, dados.comanda_ids)
     return {"message": "Sucesso"}
+
+#Osmar Steffen

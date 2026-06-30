@@ -29,3 +29,5 @@ class ComandaService:
             
         await db.commit()
         return comandas
+    
+    #Osmar Steffen
