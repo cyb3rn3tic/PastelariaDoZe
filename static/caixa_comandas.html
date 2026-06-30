@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Comandas | Pastelaria do Zé</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style> 
+        .hidden-view { display: none !important; } 
+        .nav-item { transition: all 0.2s ease-in-out; }
+        .nav-item:hover, .nav-active { background-color: #1e293b; border-left: 4px solid #3b82f6; color: white;}
+        
+        @media print {
+            body * { visibility: hidden; }
+            #modal-recibo, #area-impressao-recibo, #area-impressao-recibo * { visibility: visible; }
+            #area-impressao-recibo { position: absolute; left: 0; top: 0; width: 300px; box-shadow: none; margin: 0; padding: 10px; font-family: monospace; }
+            .no-print { display: none !important; }
+            body { background-color: white; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen overflow-hidden font-sans text-gray-800 flex relative">
+
+    <section id="view-login" class="fixed inset-0 bg-slate-900 flex items-center justify-center z-50">
+        <div class="bg-white p-10 rounded-2xl shadow-2xl text-center max-w-sm w-full border-t-8 border-blue-600">
+            <div class="text-blue-600 text-5xl mb-4"><i class="fa-solid fa-store"></i></div>
+            <h2 class="text-2xl font-black mb-6">Pastelaria do Zé</h2>
+            <input type="text" id="input-cpf" class="w-full border-b-2 focus:border-blue-600 outline-none p-3 mb-4 transition" value="1" placeholder="CPF do Operador">
+            <input type="password" id="input-senha" class="w-full border-b-2 focus:border-blue-600 outline-none p-3 mb-6 transition" value="123" placeholder="Senha">
+            <button onclick="fazerLoginAPI()" class="w-full bg-blue-600 text-white font-bold py-3 rounded shadow-lg hover:bg-blue-700 transition">Entrar no Sistema</button>
+            <p id="msg-erro-login" class="text-red-500 text-sm mt-4 font-bold hidden-view"></p>
+        </div>
+    </section>
+
+    <aside id="sidebar" class="w-64 bg-slate-900 text-gray-300 flex flex-col hidden-view shadow-2xl z-20 no-print">
+        <div class="h-20 flex items-center px-6 bg-slate-950 border-b border-slate-800">
+            <i class="fa-solid fa-store text-blue-500 text-2xl mr-3"></i>
+            <span class="text-white font-bold text-xl">E-Comandas</span>
+        </div>
+        <nav class="flex-1 py-6 flex flex-col gap-2 px-3">
+            <p class="px-3 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Operacional</p>
+            <a href="#" onclick="mudarMenu('view-caixa', this)" class="nav-item nav-active flex items-center px-4 py-3 rounded"><i class="fa-solid fa-cash-register w-6 mr-2"></i> Caixa Aberto</a>
+            <a href="#" onclick="mudarMenu('view-historico', this)" class="nav-item flex items-center px-4 py-3 rounded"><i class="fa-solid fa-clock-rotate-left w-6 mr-2"></i> Histórico</a>
+            
+            <p class="px-3 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 mt-4">Cadastros</p>
+            <a href="#" onclick="mudarMenu('view-clientes', this)" class="nav-item flex items-center px-4 py-3 rounded"><i class="fa-solid fa-users w-6 mr-2"></i> Clientes</a>
+            <a href="#" onclick="mudarMenu('view-produtos', this)" class="nav-item flex items-center px-4 py-3 rounded"><i class="fa-solid fa-box-open w-6 mr-2"></i> Produtos</a>
+            <a href="#" onclick="mudarMenu('view-funcionarios', this)" class="nav-item flex items-center px-4 py-3 rounded"><i class="fa-solid fa-id-badge w-6 mr-2"></i> Funcionários</a>
+        </nav>
+        <div class="p-4 border-t border-slate-800">
+            <button onclick="location.reload()" class="w-full bg-slate-800 hover:bg-red-600 text-white py-2 rounded font-bold transition"><i class="fa-solid fa-power-off mr-2"></i> Sair</button>
+        </div>
+    </aside>
+
+    <div id="main-wrapper" class="flex-1 flex flex-col hidden-view w-full relative">
+        <header class="h-20 bg-white shadow-sm flex items-center justify-between px-8 z-10 no-print">
+            <h1 id="header-title" class="text-2xl font-bold">Caixa Operacional</h1>
+            <div class="flex items-center gap-3">
+                <div class="text-right">
+                    <p class="font-bold text-gray-800" id="nome-operador-header">Operador</p>
+                    <p class="text-xs text-green-600 font-bold"><i class="fa-solid fa-circle text-[8px] mr-1"></i> Online</p>
+                </div>
+                <img src="./img/minhaFoto.jpeg" alt="Foto Osmar" class="w-10 h-10 rounded-full shadow border object-cover">
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50 p-8 no-print">
+            
+            <section id="view-caixa" class="view-section">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-700">Comandas Pendentes</h2>
+                    <div class="flex gap-3">
+                        <button onclick="abrirModalNovaComanda()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow-sm font-bold transition"><i class="fa-solid fa-plus mr-2"></i>Nova Comanda</button>
+                        <button onclick="buscarComandasAPI()" class="bg-white border text-gray-700 hover:bg-gray-100 px-4 py-2 rounded shadow-sm font-bold"><i class="fa-solid fa-rotate-right mr-2"></i>Atualizar</button>
+                        <button onclick="abrirTelaRecebimento()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow-sm font-bold"><i class="fa-solid fa-check-double mr-2"></i>Receber Selecionadas</button>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 border-b">
+                            <tr>
+                                <th class="p-4 w-16 text-center"><i class="fa-solid fa-check-square text-gray-400"></i></th>
+                                <th class="p-4 text-sm font-bold text-gray-600 uppercase">Comanda</th>
+                                <th class="p-4 text-sm font-bold text-gray-600 uppercase">Cliente</th>
+                                <th class="p-4 text-sm font-bold text-gray-600 uppercase text-center">Status</th>
+                                <th class="p-4 text-sm font-bold text-gray-600 uppercase text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-comandas" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="view-receber" class="view-section hidden-view">
+                <button onclick="mudarMenu('view-caixa', document.querySelector('.nav-item'))" class="text-blue-600 font-bold mb-4 hover:underline"><i class="fa-solid fa-arrow-left mr-1"></i> Voltar para o Caixa</button>
+                <div class="bg-white rounded-xl shadow-sm border p-8 max-w-3xl mx-auto">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-4"><i class="fa-solid fa-wallet text-blue-600 mr-2"></i> Fechamento de Conta</h2>
+                    
+                    <!-- RESUMO DA COMANDA E ITENS ADICIONADO AQUI -->
+                    <div id="resumo-recebimento" class="mb-8 bg-slate-50 p-6 rounded-lg border border-gray-200">
+                        <!-- Conteúdo será gerado via JS -->
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-slate-50 p-4 rounded-lg border text-center flex flex-col justify-center">
+                            <p class="text-xs text-gray-500 font-bold uppercase mb-1">Subtotal</p>
+                            <p class="text-2xl font-bold text-gray-800">R$ <span id="rec-base">0.00</span></p>
+                        </div>
+                        <div class="p-4 rounded-lg border border-red-100 bg-red-50 text-center">
+                            <p class="text-xs text-red-500 font-bold uppercase mb-1">Desconto (R$)</p>
+                            <input type="number" id="input-desc" value="0" class="w-full text-center bg-white border border-red-200 rounded py-1 text-xl font-bold text-red-600" oninput="calcularTotal()">
+                        </div>
+                        <div class="p-4 rounded-lg border border-yellow-100 bg-yellow-50 text-center">
+                            <p class="text-xs text-yellow-600 font-bold uppercase mb-1">Acréscimo (R$)</p>
+                            <input type="number" id="input-acre" value="0" class="w-full text-center bg-white border border-yellow-200 rounded py-1 text-xl font-bold text-yellow-600" oninput="calcularTotal()">
+                        </div>
+                        <div class="bg-blue-600 p-4 rounded-lg shadow-md text-center text-white flex flex-col justify-center">
+                            <p class="text-xs font-bold uppercase opacity-80 mb-1">Total a Pagar</p>
+                            <p class="text-2xl font-black">R$ <span id="rec-final">0.00</span></p>
+                        </div>
+                    </div>
+                    <button onclick="finalizarComandasAPI()" class="w-full bg-green-500 hover:bg-green-600 text-white text-xl font-bold py-4 rounded-lg shadow transition transform hover:-translate-y-1"><i class="fa-solid fa-sack-dollar mr-2"></i> Confirmar e Gerar Recibo</button>
+                </div>
+            </section>
+
+            <section id="view-historico" class="view-section hidden-view">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-700">Todas as Movimentações</h2>
+                    <button onclick="buscarHistoricoAPI()" class="bg-white border text-gray-700 hover:bg-gray-100 px-4 py-2 rounded shadow-sm font-bold"><i class="fa-solid fa-rotate-right mr-2"></i>Recarregar</button>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-800 text-white">
+                            <tr>
+                                <th class="p-4 text-sm font-bold uppercase">Comanda</th>
+                                <th class="p-4 text-sm font-bold uppercase">Cliente</th>
+                                <th class="p-4 text-sm font-bold uppercase text-center">Status</th>
+                                <th class="p-4 text-sm font-bold uppercase text-right">Valor Total</th>
+                                <th class="p-4 text-sm font-bold uppercase text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-historico" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="view-clientes" class="view-section hidden-view">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-700">Gestão de Clientes</h2>
+                    <button onclick="abrirModalCliente()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded shadow transition"><i class="fa-solid fa-plus mr-1"></i> Novo Cliente</button>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 border-b">
+                            <tr><th class="p-4 text-sm font-bold text-gray-600 uppercase">Nome</th><th class="p-4 text-sm font-bold text-gray-600 uppercase">CPF</th><th class="p-4 text-sm font-bold text-gray-600 uppercase">Telefone</th><th class="p-4 text-sm font-bold text-gray-600 uppercase text-center">Ações</th></tr>
+                        </thead>
+                        <tbody id="tabela-clientes" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="view-funcionarios" class="view-section hidden-view">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-700">Gestão de Funcionários</h2>
+                    <button onclick="abrirModalFuncionario()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded shadow transition"><i class="fa-solid fa-plus mr-1"></i> Novo Funcionário</button>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 border-b">
+                            <tr><th class="p-4 text-sm font-bold text-gray-600 uppercase">Nome</th><th class="p-4 text-sm font-bold text-gray-600 uppercase">Matrícula / CPF</th><th class="p-4 text-sm font-bold text-gray-600 uppercase">Grupo</th><th class="p-4 text-sm font-bold text-gray-600 uppercase text-center">Ações</th></tr>
+                        </thead>
+                        <tbody id="tabela-funcionarios" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="view-produtos" class="view-section hidden-view">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-700">Catálogo de Produtos</h2>
+                    <button onclick="abrirModalProduto()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded shadow transition"><i class="fa-solid fa-plus mr-1"></i> Novo Produto</button>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 border-b">
+                            <tr><th class="p-4 text-sm font-bold text-gray-600 uppercase">Produto</th><th class="p-4 text-sm font-bold text-gray-600 uppercase">Descrição</th><th class="p-4 text-sm font-bold text-gray-600 uppercase text-right">Valor Unit.</th><th class="p-4 text-sm font-bold text-gray-600 uppercase text-center">Ações</th></tr>
+                        </thead>
+                        <tbody id="tabela-produtos" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL NOVA COMANDA -->
+    <div id="modal-novacomanda" class="fixed inset-0 bg-slate-900 bg-opacity-70 flex items-center justify-center z-50 hidden-view no-print">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div class="bg-blue-600 text-white p-4 flex justify-between items-center">
+                <h3 class="font-bold text-lg"><i class="fa-solid fa-plus mr-2"></i>Abrir Comanda</h3>
+                <button onclick="fecharModalNovaComanda()"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <input type="text" id="nova-com-id" class="w-full border p-2 rounded focus:border-blue-500 outline-none" placeholder="Identificação (Ex: Mesa 04)">
+                    <input type="text" id="nova-com-cliente" class="w-full border p-2 rounded focus:border-blue-500 outline-none" placeholder="Nome do Cliente">
+                </div>
+
+                <div class="border-t border-gray-200 pt-4 mb-4">
+                    <label class="block text-xs font-bold text-gray-600 uppercase mb-2">Adicionar Produtos</label>
+                    <div class="flex gap-2 mb-3">
+                        <select id="select-produto" class="flex-1 border p-2 rounded bg-white focus:border-blue-500 outline-none">
+                            <option value="">Carregando produtos...</option>
+                        </select>
+                        <input type="number" id="prod-qtd" class="w-20 border p-2 rounded text-center focus:border-blue-500 outline-none" value="1" min="1" title="Quantidade">
+                        <button onclick="adicionarItemComanda()" class="bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold px-4 rounded transition"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                    
+                    <ul id="lista-itens-comanda" class="text-sm bg-gray-50 border rounded h-32 overflow-y-auto p-2 divide-y divide-gray-200">
+                        <li class="text-gray-400 text-center py-4">Nenhum produto adicionado.</li>
+                    </ul>
+                    
+                    <div class="text-right mt-3">
+                        <p class="text-xs text-gray-500 font-bold uppercase">Total da Comanda</p>
+                        <p class="text-2xl font-black text-blue-600">R$ <span id="total-nova-comanda">0.00</span></p>
+                    </div>
+                </div>
+
+                <button onclick="salvarNovaComandaAPI()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded shadow transition">Salvar e Abrir Comanda</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL RECIBO -->
+    <div id="modal-recibo" class="fixed inset-0 bg-slate-900 bg-opacity-70 flex items-center justify-center z-50 hidden-view">
+        <div class="bg-white rounded shadow-2xl w-full max-w-sm overflow-hidden text-gray-800 flex flex-col max-h-[90vh]">
+            <div id="area-impressao-recibo" class="bg-yellow-50 p-6 flex-1 overflow-y-auto font-mono text-xs">
+                <div class="text-center mb-4 border-b border-dashed border-gray-400 pb-4">
+                    <h3 class="font-black text-base">PASTELARIA DO ZÉ</h3>
+                    <p>CNPJ: 12.345.678/0001-99</p>
+                    <p>Rua da Informática, 500 - Centro</p>
+                    <p class="mt-2 font-bold uppercase text-[14px]">Cupom Não Fiscal</p>
+                </div>
+                <div id="conteudo-recibo" class="mb-4 space-y-1"></div>
+                <div class="border-t border-dashed border-gray-400 pt-4 text-center">
+                    <p>Obrigado pela preferência!</p>
+                    <p class="mt-2 text-gray-500" id="data-recibo"></p>
+                    <p class="mt-1 font-bold" id="operador-recibo"></p>
+                </div>
+            </div>
+            <div class="bg-slate-200 p-4 flex gap-2 justify-center no-print border-t border-gray-300">
+                <button onclick="window.print()" class="bg-blue-600 text-white font-bold py-2 px-4 rounded w-full"><i class="fa-solid fa-print mr-1"></i> Imprimir</button>
+                <button onclick="fecharModalRecibo()" class="bg-gray-500 text-white font-bold py-2 px-4 rounded w-full">Concluir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETALHES (HISTÓRICO) -->
+    <div id="modal-detalhes" class="fixed inset-0 bg-slate-900 bg-opacity-70 flex items-center justify-center z-50 hidden-view no-print">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden mt-10 mb-10 overflow-y-auto max-h-screen">
+            <div class="bg-slate-800 text-white p-4 flex justify-between items-center">
+                <h3 class="font-bold text-lg"><i class="fa-solid fa-file-invoice mr-2"></i>Detalhes da Comanda</h3>
+                <button onclick="fecharModalDetalhes()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-6" id="conteudo-modal-detalhes"></div>
+            <div class="bg-gray-50 p-4 border-t text-right">
+                <button onclick="fecharModalDetalhes()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded transition">Fechar Detalhes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CLIENTE -->
+    <div id="modal-cliente" class="fixed inset-0 bg-slate-900 bg-opacity-70 flex items-center justify-center z-50 hidden-view no-print">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="bg-blue-600 text-white p-4 flex justify-between items-center"><h3 class="font-bold text-lg"><i class="fa-solid fa-user-plus mr-2"></i>Cadastrar Cliente</h3><button onclick="fecharModalCliente()"><i class="fa-solid fa-xmark text-xl"></i></button></div>
+            <div class="p-6">
+                <input type="text" id="cli-nome" class="w-full border p-2 mb-4 rounded" placeholder="Nome Completo">
+                <input type="text" id="cli-cpf" class="w-full border p-2 mb-4 rounded" placeholder="CPF (Apenas números)" maxlength="11">
+                <input type="text" id="cli-telefone" class="w-full border p-2 mb-6 rounded" placeholder="Telefone" maxlength="11">
+                <button onclick="salvarClienteAPI()" class="w-full bg-green-600 text-white font-bold py-3 rounded">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL FUNCIONARIO -->
+    <div id="modal-funcionario" class="fixed inset-0 bg-slate-900 bg-opacity-70 flex items-center justify-center z-50 hidden-view no-print">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="bg-blue-600 text-white p-4 flex justify-between items-center"><h3 class="font-bold text-lg"><i class="fa-solid fa-id-badge mr-2"></i>Cadastrar Funcionário</h3><button onclick="fecharModalFuncionario()"><i class="fa-solid fa-xmark text-xl"></i></button></div>
+            <div class="p-6 grid grid-cols-2 gap-4">
+                <input type="text" id="func-nome" class="col-span-2 w-full border p-2 rounded" placeholder="Nome Completo">
+                <input type="text" id="func-cpf" class="w-full border p-2 rounded" placeholder="CPF" maxlength="11">
+                <input type="text" id="func-matricula" class="w-full border p-2 rounded" placeholder="Matrícula">
+                <input type="text" id="func-telefone" class="w-full border p-2 rounded" placeholder="Telefone" maxlength="11">
+                <select id="func-grupo" class="w-full border p-2 rounded bg-white">
+                    <option value="1">Admin (1)</option><option value="2">Caixa (2)</option><option value="3">Atend. (3)</option>
+                </select>
+                <input type="password" id="func-senha" class="col-span-2 w-full border p-2 rounded mb-2" placeholder="Senha de Acesso">
+                <button onclick="salvarFuncionarioAPI()" class="col-span-2 w-full bg-green-600 text-white font-bold py-3 rounded">Salvar Funcionário</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PRODUTO -->
+    <div id="modal-produto" class="fixed inset-0 bg-slate-900 bg-opacity-70 flex items-center justify-center z-50 hidden-view no-print">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="bg-blue-600 text-white p-4 flex justify-between items-center"><h3 class="font-bold text-lg"><i class="fa-solid fa-box-open mr-2"></i>Cadastrar Produto</h3><button onclick="fecharModalProduto()"><i class="fa-solid fa-xmark text-xl"></i></button></div>
+            <div class="p-6">
+                <input type="text" id="prod-nome" class="w-full border p-2 mb-4 rounded" placeholder="Nome do Produto">
+                <input type="text" id="prod-descricao" class="w-full border p-2 mb-4 rounded" placeholder="Descrição Curta (Ex: G, M, P)">
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <input type="number" step="0.01" id="prod-valor" class="w-full border p-2 rounded" placeholder="Valor (R$)">
+                    <input type="text" id="prod-foto" class="w-full border p-2 rounded" value="padrao.jpg" placeholder="Nome da Foto">
+                </div>
+                <button onclick="salvarProdutoAPI()" class="w-full bg-green-600 text-white font-bold py-3 rounded">Salvar Produto</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== LÓGICA JAVASCRIPT ==================== -->
+    <script>
+        const URL_API = "http://localhost:8000";
+        let tokenJWT = "", operadorAtual = "Operador";
+        let comandasReais = [], historicoComandas = [], selecionadas = [], totalSelecionado = 0, infoUltimoRecebimento = {};
+
+        // === MEMÓRIA DO NAVEGADOR PARA ITENS DA COMANDA ===
+        function getItensReaisAgrupados(idsArray, totalGeral) {
+            let todosItens = [];
+            let encontrouAlgum = false;
+            idsArray.forEach(id => {
+                const str = localStorage.getItem('comanda_itens_' + id);
+                if (str) {
+                    todosItens = todosItens.concat(JSON.parse(str));
+                    encontrouAlgum = true;
+                }
+            });
+            if (!encontrouAlgum) {
+                return [{ quantidade: 1, nome: "Consumo Geral (Diversos)", total: parseFloat(totalGeral) }];
+            }
+            return todosItens;
+        }
+
+        function mudarMenu(telaId, elemento) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('nav-active'));
+            if (elemento) {
+                elemento.classList.add('nav-active');
+                document.getElementById('header-title').innerText = elemento.innerText.trim();
+            }
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden-view'));
+            document.getElementById(telaId).classList.remove('hidden-view');
+
+            if(telaId === 'view-caixa') buscarComandasAPI();
+            if(telaId === 'view-historico') buscarHistoricoAPI();
+            if(telaId === 'view-clientes') listarClientes();
+            if(telaId === 'view-funcionarios') listarFuncionarios();
+            if(telaId === 'view-produtos') listarProdutos();
+        }
+
+        // === LOGIN ===
+        async function fazerLoginAPI() {
+            const cpf = document.getElementById('input-cpf').value, senha = document.getElementById('input-senha').value;
+            try {
+                const res = await fetch(`${URL_API}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cpf, senha }) });
+                if (res.ok) {
+                    const dados = await res.json();
+                    tokenJWT = dados.access_token;
+                    
+                    const meRes = await fetch(`${URL_API}/auth/me`, { headers: { 'Authorization': `Bearer ${tokenJWT}` } });
+                    if(meRes.ok){
+                        const meData = await meRes.json();
+                        operadorAtual = meData.nome;
+                    }
+                    document.getElementById('nome-operador-header').innerText = operadorAtual;
+                    document.getElementById('view-login').classList.add('hidden-view');
+                    document.getElementById('sidebar').classList.remove('hidden-view');
+                    document.getElementById('main-wrapper').classList.remove('hidden-view');
+                    buscarComandasAPI();
+                } else { document.getElementById('msg-erro-login').innerText = "CPF ou Senha inválidos."; document.getElementById('msg-erro-login').classList.remove('hidden-view'); }
+            } catch (e) { alert("Erro de conexão."); }
+        }
+
+        // === CAIXA ===
+        async function buscarComandasAPI() {
+            try {
+                const res = await fetch(`${URL_API}/comanda/`, { headers: { 'Authorization': `Bearer ${tokenJWT}` } });
+                if (res.ok) { comandasReais = await res.json(); renderizarTabelaCaixa(); }
+            } catch (e) {}
+        }
+        function renderizarTabelaCaixa() {
+            const tbody = document.getElementById('tabela-comandas');
+            tbody.innerHTML = '';
+            if(comandasReais.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-400">Nenhuma comanda aberta.</td></tr>`; return; }
+            comandasReais.forEach(c => {
+                const isChecked = selecionadas.includes(c.id) ? 'checked' : '';
+                tbody.innerHTML += `<tr class="hover:bg-blue-50 transition border-b border-gray-100"><td class="p-4 text-center"><input type="checkbox" class="w-5 h-5 cursor-pointer" onchange="toggleSel(${c.id}, ${c.total})" ${isChecked}></td><td class="p-4 font-bold text-gray-800">#${c.id} - ${c.comanda}</td><td class="p-4 text-gray-600">${c.cliente}</td><td class="p-4 text-center"><span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-[10px] font-black"><i class="fa-solid fa-lock-open mr-1"></i> ABERTA</span></td><td class="p-4 font-black text-blue-600 text-right">R$ ${parseFloat(c.total).toFixed(2)}</td></tr>`;
+            });
+        }
+        function toggleSel(id, total) { if (selecionadas.includes(id)) { selecionadas = selecionadas.filter(i => i !== id); totalSelecionado -= total; } else { selecionadas.push(id); totalSelecionado += total; } }
+        
+        // === NOVA COMANDA ===
+        let itensNovaComanda = [];
+        let valorTotalNovaComanda = 0.0;
+
+        async function abrirModalNovaComanda() {
+            document.getElementById('nova-com-id').value = "";
+            document.getElementById('nova-com-cliente').value = "";
+            document.getElementById('prod-qtd').value = "1";
+            document.getElementById('lista-itens-comanda').innerHTML = '<li class="text-gray-400 text-center py-4">Nenhum produto adicionado.</li>';
+            document.getElementById('total-nova-comanda').innerText = "0.00";
+            
+            itensNovaComanda = [];
+            valorTotalNovaComanda = 0.0;
+            document.getElementById('modal-novacomanda').classList.remove('hidden-view');
+
+            try {
+                const res = await fetch(`${URL_API}/produto/`, { headers: { 'Authorization': `Bearer ${tokenJWT}` } });
+                if (res.ok) {
+                    const produtos = await res.json();
+                    const select = document.getElementById('select-produto');
+                    if (produtos.length === 0) {
+                        select.innerHTML = '<option value="">Nenhum produto cadastrado</option>';
+                    } else {
+                        select.innerHTML = produtos.map(p => {
+                            let desc = p.descricao ? ` (${p.descricao})` : "";
+                            return `<option value="${p.id}" data-nome="${p.nome}${desc}" data-valor="${p.valor_unitario}">
+                                ${p.nome}${desc} - R$ ${parseFloat(p.valor_unitario).toFixed(2)}
+                            </option>`;
+                        }).join('');
+                    }
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function fecharModalNovaComanda() { document.getElementById('modal-novacomanda').classList.add('hidden-view'); }
+
+        function adicionarItemComanda() {
+            const select = document.getElementById('select-produto');
+            const qtdInput = document.getElementById('prod-qtd');
+            
+            if (select.options.length === 0 || !select.value) return alert("Selecione um produto.");
+            
+            const option = select.options[select.selectedIndex];
+            const nomeProduto = option.getAttribute('data-nome');
+            const valorUnitario = parseFloat(option.getAttribute('data-valor'));
+            const qtd = parseInt(qtdInput.value);
+
+            if (qtd < 1 || isNaN(qtd)) return alert("Quantidade inválida.");
+
+            const subtotal = valorUnitario * qtd;
+            valorTotalNovaComanda += subtotal;
+
+            itensNovaComanda.push({ nome: nomeProduto, quantidade: qtd, unitario: valorUnitario, total: subtotal });
+            renderizarListaItensNovaComanda();
+        }
+
+        function removerItemComanda(index) {
+            valorTotalNovaComanda -= itensNovaComanda[index].total;
+            if (valorTotalNovaComanda < 0) valorTotalNovaComanda = 0;
+            itensNovaComanda.splice(index, 1);
+            renderizarListaItensNovaComanda();
+        }
+
+        function renderizarListaItensNovaComanda() {
+            const ul = document.getElementById('lista-itens-comanda');
+            ul.innerHTML = '';
+            
+            if (itensNovaComanda.length === 0) {
+                ul.innerHTML = '<li class="text-gray-400 text-center py-4">Nenhum produto adicionado.</li>';
+            } else {
+                itensNovaComanda.forEach((item, index) => {
+                    ul.innerHTML += `
+                        <li class="py-2 flex justify-between items-center text-gray-700 border-b border-gray-100 last:border-0">
+                            <span><span class="font-bold mr-2">${item.quantidade}x</span> ${item.nome}</span>
+                            <div class="flex items-center gap-3">
+                                <span class="font-bold text-gray-900">R$ ${item.total.toFixed(2)}</span>
+                                <button onclick="removerItemComanda(${index})" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 w-7 h-7 rounded transition flex items-center justify-center" title="Remover item"><i class="fa-solid fa-minus"></i></button>
+                            </div>
+                        </li>
+                    `;
+                });
+            }
+            document.getElementById('total-nova-comanda').innerText = valorTotalNovaComanda.toFixed(2);
+        }
+
+        async function salvarNovaComandaAPI() {
+            const comanda = document.getElementById('nova-com-id').value;
+            const cliente = document.getElementById('nova-com-cliente').value;
+
+            if(!comanda || !cliente) return alert("Preencha a identificação da comanda e o nome do cliente.");
+            if(valorTotalNovaComanda === 0) return alert("Adicione pelo menos um produto à comanda.");
+
+            const payload = { comanda: comanda, cliente: cliente, total: valorTotalNovaComanda };
+
+            try {
+                const res = await fetch(`${URL_API}/comanda/`, {
+                    method: 'POST', 
+                    headers: { 'Authorization': `Bearer ${tokenJWT}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if(res.ok) { 
+                    const respostaAPI = await res.json(); 
+                    localStorage.setItem('comanda_itens_' + respostaAPI.id, JSON.stringify(itensNovaComanda));
+                    fecharModalNovaComanda(); 
+                    buscarComandasAPI(); 
+                } else {
+                    const erro = await res.json();
+                    alert("Erro ao abrir comanda: " + erro.detail);
+                }
+            } catch(e) { alert("Falha na API."); }
+        }
+
+        // === FECHAMENTO (RECEBIMENTO) ===
+        function abrirTelaRecebimento() {
+            if(selecionadas.length === 0) return alert("Selecione uma comanda!");
+            
+            document.getElementById('rec-base').innerText = totalSelecionado.toFixed(2);
+            document.getElementById('input-desc').value = 0; 
+            document.getElementById('input-acre').value = 0;
+            calcularTotal(); 
+
+            // === GERAR RESUMO DE ITENS ===
+            const infoComandas = comandasReais.filter(c => selecionadas.includes(c.id));
+            const nomesClientes = infoComandas.map(c => `<span class="text-blue-600">#${c.id} - ${c.comanda}</span> (${c.cliente})`).join(", ");
+            const itensSelecionados = getItensReaisAgrupados(selecionadas, totalSelecionado);
+
+            let htmlResumo = `
+                <div class="mb-4 pb-3 border-b border-gray-200">
+                    <p class="text-xs text-gray-500 font-bold uppercase mb-1">Comanda / Mesa</p>
+                    <p class="font-bold text-gray-800 text-lg">${nomesClientes}</p>
+                </div>
+                <p class="text-xs text-gray-500 font-bold uppercase mb-2">Itens da Conta</p>
+                <div class="max-h-40 overflow-y-auto pr-2 bg-white rounded border">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-gray-500 bg-gray-50 sticky top-0 border-b">
+                            <tr><th class="py-2 px-3">Qtd</th><th class="py-2 px-3">Produto</th><th class="py-2 px-3 text-right">Subtotal</th></tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+            `;
+
+            itensSelecionados.forEach(item => {
+                htmlResumo += `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="py-2 px-3 font-bold text-gray-700">${item.quantidade}x</td>
+                    <td class="py-2 px-3 text-gray-600">${item.nome}</td>
+                    <td class="py-2 px-3 text-right font-bold text-gray-800">R$ ${item.total.toFixed(2)}</td>
+                </tr>`;
+            });
+
+            htmlResumo += `</tbody></table></div>`;
+            document.getElementById('resumo-recebimento').innerHTML = htmlResumo;
+            // =============================
+
+            mudarMenu('view-receber', null); 
+            document.getElementById('header-title').innerText = "Recebimento";
+        }
+
+        function calcularTotal() {
+            const desc = parseFloat(document.getElementById('input-desc').value) || 0; const acre = parseFloat(document.getElementById('input-acre').value) || 0;
+            document.getElementById('rec-final').innerText = (totalSelecionado - desc + acre).toFixed(2);
+        }
+        
+        async function finalizarComandasAPI() {
+            if (selecionadas.length === 0) return;
+            const desc = parseFloat(document.getElementById('input-desc').value) || 0; const acre = parseFloat(document.getElementById('input-acre').value) || 0;
+            infoUltimoRecebimento = { ids: [...selecionadas], subtotal: totalSelecionado.toFixed(2), desconto: desc.toFixed(2), acrescimo: acre.toFixed(2), totalPagar: (totalSelecionado - desc + acre).toFixed(2), data: new Date().toLocaleString('pt-BR') };
+            try {
+                const res = await fetch(`${URL_API}/recebimento/`, { method: 'POST', headers: { 'Authorization': `Bearer ${tokenJWT}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ comanda_ids: selecionadas, desconto: desc, acrescimo: acre, observacao: "Baixa e Recibo" }) });
+                if (res.ok) { mostrarRecibo(infoUltimoRecebimento); selecionadas = []; totalSelecionado = 0; } else alert("Erro no recebimento.");
+            } catch (e) { alert("Falha na API."); }
+        }
+
+        // === RECIBO ===
+        function mostrarRecibo(info) {
+            document.getElementById('data-recibo').innerText = "Data: " + info.data;
+            document.getElementById('operador-recibo').innerText = "Op: " + operadorAtual;
+            
+            const itensConsumidos = getItensReaisAgrupados(info.ids, info.subtotal);
+            
+            let htmlItens = `<table class="w-full text-left mb-3"><tr class="border-b border-dashed border-gray-400"><th class="pb-1">Qtd</th><th class="pb-1">Produto</th><th class="text-right pb-1">Tot</th></tr>`;
+            itensConsumidos.forEach(item => { htmlItens += `<tr><td class="pt-1 pr-2">${item.quantidade}</td><td class="pt-1 truncate max-w-[150px]">${item.nome}</td><td class="text-right pt-1">${item.total.toFixed(2)}</td></tr>`; });
+            htmlItens += `</table>`;
+            
+            document.getElementById('conteudo-recibo').innerHTML = htmlItens + `<div class="border-t border-dashed border-gray-400 pt-2"><div class="flex justify-between font-black text-sm mt-2"><span>TOTAL:</span><span>R$ ${info.totalPagar}</span></div></div>`;
+            document.getElementById('modal-recibo').classList.remove('hidden-view');
+        }
+        function fecharModalRecibo() { document.getElementById('modal-recibo').classList.add('hidden-view'); mudarMenu('view-caixa', document.querySelector('a[onclick*="view-caixa"]')); }
+
+        // === HISTÓRICO E DETALHES ===
+        async function buscarHistoricoAPI() {
+            try {
+                const res = await fetch(`${URL_API}/comanda/historico`, { headers: { 'Authorization': `Bearer ${tokenJWT}` } });
+                if (res.ok) { historicoComandas = await res.json(); renderizarTabelaHistorico(); }
+            } catch (e) {}
+        }
+        function renderizarTabelaHistorico() {
+            const tbody = document.getElementById('tabela-historico');
+            tbody.innerHTML = '';
+            if(historicoComandas.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-gray-400">Nenhum histórico.</td></tr>`; return; }
+            historicoComandas.forEach(c => {
+                let badge = c.status === 0 ? `<span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-[10px] font-black"><i class="fa-solid fa-lock-open mr-1"></i> ABERTA</span>` : `<span class="bg-gray-200 text-gray-600 px-3 py-1 rounded-full text-[10px] font-black"><i class="fa-solid fa-lock mr-1"></i> FECHADA</span>`;
+                tbody.innerHTML += `<tr class="hover:bg-slate-50 transition border-b border-gray-100"><td class="p-4 font-bold text-gray-800">#${c.id} - ${c.comanda}</td><td class="p-4 text-gray-600">${c.cliente}</td><td class="p-4 text-center">${badge}</td><td class="p-4 font-black text-gray-800 text-right">R$ ${parseFloat(c.total).toFixed(2)}</td><td class="p-4 text-center">
+                    <button onclick="abrirModalDetalhes(${c.id})" class="text-blue-600 hover:text-blue-800 bg-blue-100 hover:bg-blue-200 px-3 py-1 rounded transition" title="Ver Detalhes"><i class="fa-solid fa-eye"></i></button>
+                    <button onclick="deletarComandaAPI(${c.id})" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1 rounded transition ml-2" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                </td></tr>`;
+            });
+        }
+        function abrirModalDetalhes(id) {
+            const c = historicoComandas.find(x => x.id === id);
+            if(!c) return;
+            
+            const itens = getItensReaisAgrupados([id], c.total);
+            
+            let htmlItens = `<table class="w-full text-sm text-left border rounded overflow-hidden mt-3"><tr class="bg-gray-100 text-gray-600"><th class="p-2">Qtd</th><th class="p-2">Item</th><th class="p-2 text-right">Total</th></tr>`;
+            itens.forEach(p => { htmlItens += `<tr><td class="p-2">${p.quantidade}x</td><td class="p-2">${p.nome}</td><td class="p-2 text-right font-black">R$ ${parseFloat(p.total).toFixed(2)}</td></tr>`; });
+            htmlItens += `</table>`;
+            
+            document.getElementById('conteudo-modal-detalhes').innerHTML = `<p class="font-bold text-gray-800 text-base mb-2">Comanda: #${c.id} - ${c.comanda}</p><p class="text-sm">Cliente: ${c.cliente}</p>` + htmlItens + `<p class="mt-4 text-right text-lg font-black text-blue-700">Total: R$ ${parseFloat(c.total).toFixed(2)}</p>`;
+            document.getElementById('modal-detalhes').classList.remove('hidden-view');
+        }
+        function fecharModalDetalhes() { document.getElementById('modal-detalhes').classList.add('hidden-view'); }
+        async function deletarComandaAPI(id) {
+            if(!confirm("Excluir esta comanda permanentemente do banco de dados?")) return;
+            try {
+                const res = await fetch(`${URL_API}/comanda/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${tokenJWT}` } });
+                if(res.ok || res.status === 204) {
+                    localStorage.removeItem('comanda_itens_' + id); 
+                    buscarHistoricoAPI();
+                } else alert("Erro ao excluir. O usuário precisa ser do Grupo 1 (Admin).");
+            } catch(e){}
+        }
+
+        // ==================== CRUD CADASTROS ====================
+        async function listarClientes() { try { const res = await fetch(`${URL_API}/cliente/`, { headers: { 'Authorization': `Bearer ${tokenJWT}` } }); if(res.ok) { const d = await res.json(); document.getElementById('tabela-clientes').innerHTML = d.length ? d.map(c => `<tr><td class="p-4 font-bold text-gray-800">${c.nome}</td><td class="p-4 text-gray-600">${c.cpf}</td><td class="p-4 text-gray-600">${c.telefone}</td><td class="p-4 text-center"><button onclick="deletarClienteAPI(${c.id})" class="text-red-500 bg-red-50 px-3 py-1 rounded"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : `<tr><td colspan="4" class="p-6 text-center text-gray-400">Vazio.</td></tr>`; } } catch(e){} }
+        function abrirModalCliente() { document.getElementById('cli-nome').value=""; document.getElementById('cli-cpf').value=""; document.getElementById('cli-telefone').value=""; document.getElementById('modal-cliente').classList.remove('hidden-view'); }
+        function fecharModalCliente() { document.getElementById('modal-cliente').classList.add('hidden-view'); }
+        async function salvarClienteAPI() { const payload = { nome: document.getElementById('cli-nome').value, cpf: document.getElementById('cli-cpf').value, telefone: document.getElementById('cli-telefone').value }; if(!payload.nome || !payload.cpf) return; try { const res = await fetch(`${URL_API}/cliente/`, { method: 'POST', headers: { 'Authorization': `Bearer ${tokenJWT}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if(res.ok) { fecharModalCliente(); listarClientes(); } else alert("Erro no cadastro."); } catch(e){} }
+        async function deletarClienteAPI(id) { if(!confirm("Excluir cliente?")) return; try { const res = await fetch(`${URL_API}/cliente/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${tokenJWT}` } }); if(res.ok || res.status === 204) listarClientes(); } catch(e){} }
+
+        async function listarFuncionarios() { try { const res = await fetch(`${URL_API}/funcionario/`, { headers: { 'Authorization': `Bearer ${tokenJWT}` } }); if(res.ok) { const d = await res.json(); document.getElementById('tabela-funcionarios').innerHTML = d.length ? d.map(f => `<tr><td class="p-4 font-bold text-gray-800">${f.nome}</td><td class="p-4 text-gray-600">Mat: ${f.matricula} <br> <span class="text-xs text-gray-400">CPF: ${f.cpf}</span></td><td class="p-4 text-blue-600 font-bold">Nível ${f.grupo}</td><td class="p-4 text-center"><button onclick="deletarFuncionarioAPI(${f.id})" class="text-red-500 bg-red-50 px-3 py-1 rounded"><i class="fa-solid fa-trash"></i></button></td></tr>`).join('') : `<tr><td colspan="4" class="p-6 text-center text-gray-400">Vazio.</td></tr>`; } } catch(e){} }
+        function abrirModalFuncionario() { document.getElementById('func-nome').value=""; document.getElementById('func-cpf').value=""; document.getElementById('func-matricula').value=""; document.getElementById('func-telefone').value=""; document.getElementById('func-senha').value=""; document.getElementById('func-grupo').value="1"; document.getElementById('modal-funcionario').classList.remove('hidden-view'); }
+        function fecharModalFuncionario() { document.getElementById('modal-funcionario').classList.add('hidden-view'); }
+        async function salvarFuncionarioAPI() { const payload = { nome: document.getElementById('func-nome').value, cpf: document.getElementById('func-cpf').value, matricula: document.getElementById('func-matricula').value, telefone: document.getElementById('func-telefone').value, grupo: parseInt(document.getElementById('func-grupo').value), senha: document.getElementById('func-senha').value }; if(!payload.nome || !payload.cpf || !payload.senha) return; try { const res = await fetch(`${URL_API}/funcionario/`, { method: 'POST', headers: { 'Authorization': `Bearer ${tokenJWT}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if(res.ok) { fecharModalFuncionario(); listarFuncionarios(); } else alert("Erro no cadastro."); } catch(e){} }
+        async function deletarFuncionarioAPI(id) { if(!confirm("Excluir funcionário?")) return; try { const res = await fetch(`${URL_API}/funcionario/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${tokenJWT}` } }); if(res.ok || res.status === 204) listarFuncionarios(); else alert("Permissão negada."); } catch(e){} }
+
+        async function listarProdutos() { 
+            try { 
+                const res = await fetch(`${URL_API}/produto/`, { headers: { 'Authorization': `Bearer ${tokenJWT}` } }); 
+                if(res.ok) { 
+                    const d = await res.json(); 
+                    document.getElementById('tabela-produtos').innerHTML = d.length ? 
+                    d.map(p => `
+                        <tr class="hover:bg-blue-50 transition">
+                            <td class="p-4">
+                                <div class="flex items-center gap-3">
+                                    <img src="/static/img/${p.foto}" alt="Produto" class="w-12 h-12 rounded border object-cover">
+                                    <span class="font-bold text-gray-800">${p.nome}</span>
+                                </div>
+                            </td>
+                            <td class="p-4 text-gray-600">${p.descricao}</td>
+                            <td class="p-4 text-green-700 font-bold text-right">R$ ${parseFloat(p.valor_unitario).toFixed(2)}</td>
+                            <td class="p-4 text-center">
+                                <button onclick="deletarProdutoAPI(${p.id})" class="text-red-500 bg-red-50 px-3 py-1 rounded"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>`).join('') : `<tr><td colspan="4" class="p-6 text-center text-gray-400">Vazio.</td></tr>`; 
+                } 
+            } catch(e){} 
+        }
+        function abrirModalProduto() { document.getElementById('prod-nome').value=""; document.getElementById('prod-descricao').value=""; document.getElementById('prod-valor').value=""; document.getElementById('prod-foto').value="padrao.jpg"; document.getElementById('modal-produto').classList.remove('hidden-view'); }
+        function fecharModalProduto() { document.getElementById('modal-produto').classList.add('hidden-view'); }
+        async function salvarProdutoAPI() { const payload = { nome: document.getElementById('prod-nome').value, descricao: document.getElementById('prod-descricao').value, foto: document.getElementById('prod-foto').value, valor_unitario: parseFloat(document.getElementById('prod-valor').value) }; if(!payload.nome || !payload.descricao || isNaN(payload.valor_unitario)) return; try { const res = await fetch(`${URL_API}/produto/`, { method: 'POST', headers: { 'Authorization': `Bearer ${tokenJWT}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if(res.ok) { fecharModalProduto(); listarProdutos(); } else alert("Erro no cadastro."); } catch(e){} }
+        async function deletarProdutoAPI(id) { if(!confirm("Excluir produto?")) return; try { const res = await fetch(`${URL_API}/produto/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${tokenJWT}` } }); if(res.ok || res.status === 204) listarProdutos(); } catch(e){} }
+    </script>
+</body>
+</html>
